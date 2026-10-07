@@ -157,10 +157,25 @@ function initEditor() {
     matchTags: { bothTags: true },
     tabSize: 2,
     indentWithTabs: false,
-    lineWrapping: true
+    lineWrapping: true,
+    extraKeys: {
+      'Ctrl-Space': 'autocomplete',
+      'Alt-Space': 'autocomplete'
+    }
   });
 
   editor.swapDoc(htmlDoc);
+
+  // Αυτόματη εμφάνιση προτάσεων (Autocomplete) καθώς ο μαθητής ανοίγει tag ή πληκτρολογεί
+  editor.on('inputRead', (cm, change) => {
+    if (change.origin === '+input' || change.origin === 'paste') {
+      const text = change.text ? change.text[0] : '';
+      // Αν ο χρήστης πληκτρολόγησε '<' ή γράμμα/χαρακτήρα
+      if (text === '<' || /^[a-zA-Z0-9_\-:]$/.test(text)) {
+        triggerAutocomplete(cm);
+      }
+    }
+  });
 
   editor.on('change', () => {
     onCodeChanged();
@@ -169,6 +184,23 @@ function initEditor() {
   editor.on('cursorActivity', () => {
     updateCursorInfo();
   });
+}
+
+// Εκτέλεση προτάσεων HTML / CSS ανάλογα με την ενεργή καρτέλα
+function triggerAutocomplete(cm) {
+  if (cm.state.completionActive) return; // Ήδη ενεργό παράθυρο προτάσεων
+
+  if (activeTab === 'html') {
+    cm.showHint({
+      hint: CodeMirror.hints.html || CodeMirror.hints.xml,
+      completeSingle: false
+    });
+  } else if (activeTab === 'css') {
+    cm.showHint({
+      hint: CodeMirror.hints.css,
+      completeSingle: false
+    });
+  }
 }
 
 function onCodeChanged() {
