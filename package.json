@@ -30,6 +30,7 @@
     "appId": "gr.sch.eduhtml.studio",
     "productName": "EduHTML Studio",
     "win": {
+      "icon": "src/assets/icon.ico",
       "target": [
         {
           "target": "nsis",
