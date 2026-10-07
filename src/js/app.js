@@ -245,6 +245,9 @@ function setMode(mode) {
   }
 
   applyModeVisibility();
+  renderGuideCategories();
+  filterGuideItems(document.getElementById('guide-search-input') ? document.getElementById('guide-search-input').value.trim().toLowerCase() : '');
+  initTemplatesModal();
   updateLivePreview();
   validateHtmlCode();
 }
@@ -364,7 +367,19 @@ function renderGuideCategories() {
   const container = document.getElementById('guide-categories');
   container.innerHTML = '';
 
-  GUIDE_CATEGORIES.forEach(cat => {
+  const visibleCategories = GUIDE_CATEGORIES.filter(cat => {
+    if (cat.requiresMode === 'advanced' && currentMode === 'beginner') {
+      return false;
+    }
+    return true;
+  });
+
+  // Αν η επιλεγμένη κατηγορία έγινε κρυφή (π.χ. μετάβαση σε beginner), επιστροφή στο 'all'
+  if (activeCategory !== 'all' && !visibleCategories.some(c => c.id === activeCategory)) {
+    activeCategory = 'all';
+  }
+
+  visibleCategories.forEach(cat => {
     const pill = document.createElement('button');
     pill.className = `cat-pill ${cat.id === activeCategory ? 'active' : ''}`;
     pill.textContent = `${cat.icon} ${cat.title}`;
@@ -383,14 +398,22 @@ function renderGuideItems(filteredItems = GUIDE_ITEMS) {
   const container = document.getElementById('guide-content');
   container.innerHTML = '';
 
-  if (filteredItems.length === 0) {
+  // Φιλτράρισμα βάσει λειτουργίας (Απόκρυψη JavaScript σε Αρχάριο)
+  let itemsToRender = filteredItems.filter(item => {
+    if (item.requiresMode === 'advanced' && currentMode === 'beginner') {
+      return false;
+    }
+    return true;
+  });
+
+  if (itemsToRender.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 13px;">
       Δεν βρέθηκαν εντολές που να ταιριάζουν στην αναζήτησή σας.
     </div>`;
     return;
   }
 
-  filteredItems.forEach(item => {
+  itemsToRender.forEach(item => {
     const card = document.createElement('div');
     card.className = 'guide-card';
 
@@ -419,7 +442,12 @@ function renderGuideItems(filteredItems = GUIDE_ITEMS) {
 }
 
 function filterGuideItems(query) {
-  let filtered = GUIDE_ITEMS;
+  let filtered = GUIDE_ITEMS.filter(item => {
+    if (item.requiresMode === 'advanced' && currentMode === 'beginner') {
+      return false;
+    }
+    return true;
+  });
 
   if (activeCategory !== 'all') {
     filtered = filtered.filter(item => item.category === activeCategory);
@@ -512,7 +540,14 @@ function initTemplatesModal() {
   const grid = document.getElementById('templates-grid');
   grid.innerHTML = '';
 
-  STARTER_TEMPLATES.forEach(tpl => {
+  const visibleTemplates = STARTER_TEMPLATES.filter(tpl => {
+    if (tpl.requiresMode === 'advanced' && currentMode === 'beginner') {
+      return false;
+    }
+    return true;
+  });
+
+  visibleTemplates.forEach(tpl => {
     const card = document.createElement('div');
     card.className = 'template-card';
     card.innerHTML = `

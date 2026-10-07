@@ -11,7 +11,8 @@ const GUIDE_CATEGORIES = [
   { id: 'css_basics', title: 'CSS Βασικά & Χρώματα', icon: '🎨' },
   { id: 'css_typography', title: 'CSS Γραμματοσειρές', icon: '🔤' },
   { id: 'css_boxmodel', title: 'CSS Box Model & Περιθώρια', icon: '📦' },
-  { id: 'css_flexbox', title: 'CSS Διάταξη & Flexbox', icon: '📐' }
+  { id: 'css_flexbox', title: 'CSS Διάταξη & Flexbox', icon: '📐' },
+  { id: 'javascript', title: 'JavaScript (ΕΠΑΛ)', icon: '⚡', requiresMode: 'advanced' }
 ];
 
 const GUIDE_ITEMS = [
@@ -530,5 +531,92 @@ const GUIDE_ITEMS = [
     syntax: 'gap: 15px;\nflex-wrap: wrap;',
     example: '.gallery {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 20px;\n}',
     insertCode: 'gap: 20px;\nflex-wrap: wrap;\n'
+  },
+
+  // --- JAVASCRIPT (ΕΠΑΛ - ΠΡΟΧΩΡΗΜΕΝΟ) ---
+  {
+    category: 'javascript',
+    target: 'html',
+    name: '<script> ... </script>',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    summary: 'Ενσωμάτωση κώδικα JavaScript',
+    description: 'Περικλείει εκτελέσιμο κώδικα JavaScript στην ιστοσελίδα. Συνήθως τοποθετείται λίγο πριν το κλείσιμο </body>.',
+    syntax: '<script>\n  // Κώδικας JavaScript εδώ\n</script>',
+    example: '<script>\n  console.log("Γεια σου κόσμε!");\n</script>',
+    insertCode: '<script>\n  \n</script>\n'
+  },
+  {
+    category: 'javascript',
+    target: 'html',
+    name: 'document.getElementById()',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    summary: 'Επιλογή στοιχείου HTML μέσω ID',
+    description: 'Επιστρέφει το στοιχείο της ιστοσελίδας που έχει το συγκεκριμένο id για να διαβάσουμε ή να αλλάξουμε το περιεχόμενό του.',
+    syntax: 'const el = document.getElementById("myId");',
+    example: 'const titlos = document.getElementById("main-title");\ntitlos.textContent = "Νέος Τίτλος!";',
+    insertCode: 'const stoixeio = document.getElementById("my-id");\n'
+  },
+  {
+    category: 'javascript',
+    target: 'html',
+    name: 'element.textContent / innerHTML',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    summary: 'Αλλαγή περιεχομένου στοιχείου',
+    description: 'Το textContent αλλάζει μόνο το κείμενο με ασφάλεια. Το innerHTML επιτρέπει και την εισαγωγή ετικετών HTML.',
+    syntax: 'el.textContent = "Νέο κείμενο";\nel.innerHTML = "<strong>Έντονο</strong>";',
+    example: 'document.getElementById("minima").textContent = "Επιτυχής σύνδεση!";',
+    insertCode: 'document.getElementById("minima").textContent = "Νέο μήνυμα!";\n'
+  },
+  {
+    category: 'javascript',
+    target: 'html',
+    name: 'element.style (Αλλαγή CSS δυναμικά)',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    summary: 'Τροποποίηση εμφάνισης με JavaScript',
+    description: 'Επιτρέπει την άμεση αλλαγή στυλ CSS μέσω κώδικα (π.χ. χρώμα, μέγεθος, εμφάνιση/απόκρυψη).',
+    syntax: 'el.style.color = "red";\nel.style.backgroundColor = "#e2e8f0";\nel.style.display = "none";',
+    example: 'const box = document.getElementById("box");\nbox.style.color = "blue";\nbox.style.fontSize = "20px";',
+    insertCode: 'document.getElementById("box").style.color = "#2563eb";\n'
+  },
+  {
+    category: 'javascript',
+    target: 'html',
+    name: 'addEventListener("click", ...)',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    summary: 'Χειρισμός κλικ / συμβάντων (Events)',
+    description: 'Συνδέει μια συνάρτηση με ένα συμβάν (π.χ. όταν ο χρήστης πατήσει ένα κουμπί ή πληκτρολογήσει).',
+    syntax: 'btn.addEventListener("click", function() {\n  // Ενέργειες\n});',
+    example: 'const koubi = document.getElementById("btn-test");\nkoubi.addEventListener("click", () => {\n  alert("Πατήθηκε το κουμπί!");\n});',
+    insertCode: 'document.getElementById("btn-my").addEventListener("click", () => {\n  alert("Έγινε κλικ!");\n});\n'
+  },
+  {
+    category: 'javascript',
+    target: 'html',
+    name: 'alert() & confirm() & prompt()',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    summary: 'Παράθυρα διαλόγου με τον χρήστη',
+    description: 'alert(): εμφάνιση μηνύματος. confirm(): ερώτηση Ναι/Όχι (επιστρέφει true/false). prompt(): ζητά πληκτρολόγηση κειμένου.',
+    syntax: 'alert("Καλώς ήρθατε!");\nconst apantisi = confirm("Συνέχεια;");\nconst onoma = prompt("Πώς σε λένε;");',
+    example: 'const onoma = prompt("Δώσε το όνομά σου:");\nalert("Γεια σου " + onoma + "!");',
+    insertCode: 'alert("Καλώς ήρθατε στην ιστοσελίδα!");\n'
+  },
+  {
+    category: 'javascript',
+    target: 'html',
+    name: 'Συναρτήσεις (Functions)',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    summary: 'Ορισμός & κλήση συνάρτησης',
+    description: 'Ομαδοποιεί εντολές που εκτελούνται μαζί όταν καλείται η συνάρτηση.',
+    syntax: 'function onomaSynartisis(param1) {\n  // κώδικας\n}',
+    example: 'function ypolologismosFPA(timi) {\n  return timi * 1.24;\n}',
+    insertCode: 'function xairetismos() {\n  alert("Γεια σας!");\n}\n'
   }
 ];
+

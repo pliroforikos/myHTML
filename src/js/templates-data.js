@@ -975,5 +975,412 @@ footer {
   margin-top: auto;
 }`
     }
+  },
+  {
+    id: 'js-counter',
+    title: '7. Διαδραστικός Μετρητής (JavaScript)',
+    category: 'JavaScript (ΕΠΑΛ)',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    description: 'Εισαγωγή στη JavaScript: Διαχείριση συμβάντων click, μεταβλητές και αλλαγή περιεχομένου με DOM.',
+    singleFile: `<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Διαδραστικός Μετρητής</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px 20px;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    .card {
+      background: white;
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .display {
+      font-size: 54px;
+      font-weight: bold;
+      color: #2563eb;
+      margin: 20px 0;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    button.reset {
+      background-color: #64748b;
+    }
+    button.reset:hover {
+      background-color: #475569;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>⏱️ Μετρητής Κλικ</h2>
+    <div id="counter-val" class="display">0</div>
+    <div class="btn-group">
+      <button onclick="decrement()">- 1</button>
+      <button class="reset" onclick="reset()">Μηδενισμός</button>
+      <button onclick="increment()">+ 1</button>
+    </div>
+  </div>
+
+  <script>
+    let count = 0;
+    const display = document.getElementById('counter-val');
+
+    function update() {
+      display.textContent = count;
+      if (count > 0) display.style.color = '#10b981';
+      else if (count < 0) display.style.color = '#ef4444';
+      else display.style.color = '#2563eb';
+    }
+
+    function increment() {
+      count++;
+      update();
+    }
+
+    function decrement() {
+      count--;
+      update();
+    }
+
+    function reset() {
+      count = 0;
+      update();
+    }
+  </script>
+
+</body>
+</html>`,
+    multiFile: {
+      html: `<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Διαδραστικός Μετρητής</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="card">
+    <h2>⏱️ Μετρητής Κλικ</h2>
+    <div id="counter-val" class="display">0</div>
+    <div class="btn-group">
+      <button id="btn-dec">- 1</button>
+      <button id="btn-reset" class="reset">Μηδενισμός</button>
+      <button id="btn-inc">+ 1</button>
+    </div>
+  </div>
+
+  <script>
+    let count = 0;
+    const display = document.getElementById('counter-val');
+
+    function update() {
+      display.textContent = count;
+      if (count > 0) display.style.color = '#10b981';
+      else if (count < 0) display.style.color = '#ef4444';
+      else display.style.color = '#2563eb';
+    }
+
+    document.getElementById('btn-inc').addEventListener('click', () => {
+      count++;
+      update();
+    });
+
+    document.getElementById('btn-dec').addEventListener('click', () => {
+      count--;
+      update();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      count = 0;
+      update();
+    });
+  </script>
+
+</body>
+</html>`,
+      css: `body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 50px 20px;
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.card {
+  background: white;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.display {
+  font-size: 54px;
+  font-weight: bold;
+  color: #2563eb;
+  margin: 20px 0;
+}
+
+.btn-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+button {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background-color: #1d4ed8;
+}
+
+button.reset {
+  background-color: #64748b;
+}
+
+button.reset:hover {
+  background-color: #475569;
+}`
+    }
+  },
+  {
+    id: 'js-quiz',
+    title: '8. Κουίζ Πολλαπλής Επιλογής (JavaScript)',
+    category: 'JavaScript (ΕΠΑΛ)',
+    level: 'ΕΠΑΛ (JavaScript)',
+    requiresMode: 'advanced',
+    description: 'Μαθητικό κουίζ με ερωτήσεις πληροφορικής, έλεγχο απάντησης και υπολογισμό τελικού βαθμού.',
+    singleFile: `<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Μαθητικό Κουίζ Πληροφορικής</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 30px 15px;
+    }
+    .quiz-card {
+      max-width: 550px;
+      margin: 0 auto;
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+      border: 1px solid #334155;
+    }
+    h2 { color: #38bdf8; margin-top: 0; }
+    .question { margin-bottom: 20px; font-size: 17px; }
+    .options button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #334155;
+      color: white;
+      border: 1px solid #475569;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .options button:hover {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      display: none;
+    }
+    .correct { background: #065f46; color: #34d399; }
+    .wrong { background: #7f1d1d; color: #f87171; }
+  </style>
+</head>
+<body>
+
+  <div class="quiz-card">
+    <h2>🎯 Κουίζ HTML & Web</h2>
+    <p class="question"><strong>Ερώτηση:</strong> Ποια ετικέτα HTML χρησιμοποιείται για την εισαγωγή εικόνας;</p>
+    
+    <div class="options">
+      <button onclick="checkAnswer(false)">A. &lt;picture&gt;</button>
+      <button onclick="checkAnswer(true)">B. &lt;img&gt;</button>
+      <button onclick="checkAnswer(false)">Γ. &lt;image&gt;</button>
+      <button onclick="checkAnswer(false)">Δ. &lt;src&gt;</button>
+    </div>
+
+    <div id="result-box" class="result"></div>
+  </div>
+
+  <script>
+    function checkAnswer(isCorrect) {
+      const box = document.getElementById('result-box');
+      box.style.display = 'block';
+      if (isCorrect) {
+        box.className = 'result correct';
+        box.textContent = '🎉 Σωστά! Η ετικέτα <img> χρησιμοποιείται για εικόνες.';
+      } else {
+        box.className = 'result wrong';
+        box.textContent = '❌ Λάθος απάντηση! Δοκιμάστε ξανά.';
+      }
+    }
+  </script>
+
+</body>
+</html>`,
+    multiFile: {
+      html: `<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Μαθητικό Κουίζ Πληροφορικής</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="quiz-card">
+    <h2>🎯 Κουίζ HTML & Web</h2>
+    <p class="question"><strong>Ερώτηση:</strong> Ποια ετικέτα HTML χρησιμοποιείται για την εισαγωγή εικόνας;</p>
+    
+    <div class="options">
+      <button onclick="checkAnswer(false)">A. &lt;picture&gt;</button>
+      <button onclick="checkAnswer(true)">B. &lt;img&gt;</button>
+      <button onclick="checkAnswer(false)">Γ. &lt;image&gt;</button>
+      <button onclick="checkAnswer(false)">Δ. &lt;src&gt;</button>
+    </div>
+
+    <div id="result-box" class="result"></div>
+  </div>
+
+  <script>
+    function checkAnswer(isCorrect) {
+      const box = document.getElementById('result-box');
+      box.style.display = 'block';
+      if (isCorrect) {
+        box.className = 'result correct';
+        box.textContent = '🎉 Σωστά! Η ετικέτα <img> χρησιμοποιείται για εικόνες.';
+      } else {
+        box.className = 'result wrong';
+        box.textContent = '❌ Λάθος απάντηση! Δοκιμάστε ξανά.';
+      }
+    }
+  </script>
+
+</body>
+</html>`,
+      css: `body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 30px 15px;
+}
+
+.quiz-card {
+  max-width: 550px;
+  margin: 0 auto;
+  background: #1e293b;
+  padding: 30px;
+  border-radius: 14px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+  border: 1px solid #334155;
+}
+
+h2 {
+  color: #38bdf8;
+  margin-top: 0;
+}
+
+.question {
+  margin-bottom: 20px;
+  font-size: 17px;
+}
+
+.options button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #334155;
+  color: white;
+  border: 1px solid #475569;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.options button:hover {
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+
+.result {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  display: none;
+}
+
+.correct {
+  background: #065f46;
+  color: #34d399;
+}
+
+.wrong {
+  background: #7f1d1d;
+  color: #f87171;
+}`
+    }
   }
 ];
