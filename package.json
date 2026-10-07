@@ -1,0 +1,39 @@
+{
+  "name": "edu-html-studio",
+  "version": "1.0.0",
+  "description": "Εκπαιδευτικός HTML & CSS Editor με ενσωματωμένο Browser για ΓΕΛ και ΕΠΑΛ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": [
+    "html",
+    "css",
+    "education",
+    "editor",
+    "gel",
+    "epal"
+  ],
+  "author": "Λέων Προκόπης (Leon Prokopis)",
+  "license": "CC-BY-NC-4.0",
+  "dependencies": {
+    "codemirror": "^5.65.21",
+    "jszip": "^3.10.2"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "gr.sch.eduhtml.studio",
+    "productName": "EduHTML Studio",
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "artifactName": "${productName}-Windows11-Portable.${ext}"
+    }
+  }
+}

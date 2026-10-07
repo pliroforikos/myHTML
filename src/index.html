@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduHTML Studio - Εκπαιδευτικός HTML & CSS Editor</title>
+  
+  <!-- CodeMirror CSS -->
+  <link rel="stylesheet" href="vendor/codemirror/codemirror.css">
+  <link rel="stylesheet" href="vendor/codemirror/dracula.css">
+  <link rel="stylesheet" href="vendor/codemirror/eclipse.css">
+  
+  <!-- Application CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-theme="dark">
+
+  <!-- TOP TOOLBAR -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">&lt;/&gt;</div>
+      <div class="brand-title">
+        <span class="brand-name">EduHTML Studio</span>
+        <span class="brand-subtitle">Α' Λυκείου ΓΕΛ &amp; ΕΠΑΛ (Πληροφορική)</span>
+      </div>
+    </div>
+
+    <!-- Mode Selector: Αρχάριος (Ενιαίο) vs Προχωρημένος (Tabs) -->
+    <div class="mode-selector">
+      <button id="btn-mode-beginner" class="mode-btn active" title="Ενιαίο αρχείο HTML με εσωτερικό CSS">
+        <span>🌱</span> Αρχάριος (Ενιαίο)
+      </button>
+      <button id="btn-mode-advanced" class="mode-btn" title="Ξεχωριστά αρχεία index.html και style.css">
+        <span>🚀</span> Προχωρημένος (Tabs)
+      </button>
+    </div>
+
+    <!-- Main Toolbar Actions -->
+    <div class="toolbar-actions">
+      <button id="btn-new" class="btn" title="Νέο αρχείο (Ctrl+N)">
+        <span>📄</span> Νέο
+      </button>
+      <button id="btn-open" class="btn" title="Άνοιγμα αρχείου (Ctrl+O)">
+        <span>📂</span> Άνοιγμα
+      </button>
+      <button id="btn-save" class="btn" title="Αποθήκευση (Ctrl+S)">
+        <span>💾</span> Αποθήκευση
+      </button>
+      <button id="btn-export-zip" class="btn" title="Εξαγωγή σε ZIP για παράδοση εργασίας στον καθηγητή">
+        <span>📦</span> Εξαγωγή ZIP
+      </button>
+      <button id="btn-templates" class="btn" title="Έτοιμα Εκπαιδευτικά Πρότυπα">
+        <span>💡</span> Πρότυπα
+      </button>
+      <button id="btn-format" class="btn" title="Αυτόματη στοίχιση κώδικα (Shift+Alt+F)">
+        <span>✨</span> Μορφοποίηση
+      </button>
+      <button id="btn-open-edge" class="btn btn-primary" title="Προβολή στον επιλεγμένο Browser (Ctrl+B)">
+        <span id="open-browser-icon">🌐</span> <span id="open-browser-text">Προβολή στον Edge</span>
+      </button>
+      <button id="btn-eclass" class="btn" title="Σύνδεση με το eclass.sch.gr (Πανελλήνιο Σχολικό Δίκτυο)">
+        <span>🏫</span> e-Class
+      </button>
+      <button id="btn-toggle-guide" class="btn btn-icon-only" title="Εναλλαγή Οδηγού Εντολών (Ctrl+G)">
+        <span>📚</span>
+      </button>
+      <button id="btn-zoom-in" class="btn btn-icon-only" title="Μεγέθυνση κειμένου">
+        <span>A+</span>
+      </button>
+      <button id="btn-zoom-out" class="btn btn-icon-only" title="Σμίκρυνση κειμένου">
+        <span>A-</span>
+      </button>
+      <button id="btn-theme" class="btn btn-icon-only" title="Εναλλαγή Φωτεινού/Σκοτεινού θέματος">
+        <span>🌓</span>
+      </button>
+      <button id="btn-settings" class="btn btn-icon-only" title="Ρυθμίσεις (Browser, Φάκελος, Εμφάνιση)">
+        <span>⚙️</span>
+      </button>
+      <button id="btn-about" class="btn btn-icon-only" title="Σχετικά &amp; Όροι Χρήσης">
+        <span>ℹ️</span>
+      </button>
+      <button id="btn-win-fullscreen" class="btn btn-icon-only" title="Εναλλαγή Πλήρους Οθόνης (F11)">
+        <span>⛶</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="workspace-container">
+    
+    <!-- LEFT PANEL: ΟΔΗΓΟΣ ΕΝΤΟΛΩΝ (CHEAT SHEET & REFERENCE) -->
+    <section id="guide-panel" class="guide-panel collapsed">
+      <div class="guide-header">
+        <div class="guide-title-bar">
+          <div class="guide-title">
+            <span>📖</span> Οδηγός Εντολών &amp; Παραδείγματα
+          </div>
+        </div>
+        
+        <div class="guide-search">
+          <input type="text" id="guide-search-input" placeholder="🔍 Αναζήτηση εντολής (π.χ. table, color, link)...">
+          <button id="guide-search-clear" class="guide-search-clear">✕</button>
+        </div>
+
+        <div id="guide-categories" class="guide-categories">
+          <!-- Δημιουργείται δυναμικά από το guide-data.js -->
+        </div>
+      </div>
+
+      <div id="guide-content" class="guide-content">
+        <!-- Κάρτες εντολών με παραδείγματα και κουμπί εισαγωγής -->
+      </div>
+    </section>
+
+    <!-- GUTTER 1: RESIZER GUIDE / EDITOR -->
+    <div id="gutter-guide" class="gutter"></div>
+
+    <!-- CENTER PANEL: EDITOR -->
+    <section class="editor-panel">
+      <div class="tabs-bar">
+        <div id="tabs-group" class="tabs-group">
+          <div id="tab-html" class="tab active">
+            <span class="tab-icon">🟧</span> index.html
+          </div>
+          <div id="tab-css" class="tab" style="display: none;">
+            <span class="tab-icon">🟦</span> style.css
+          </div>
+        </div>
+        <div class="editor-tools">
+          <span style="font-size: 11px; color: var(--text-dim);">Αυτόματη συμπλήρωση &amp; κλείσιμο ετικετών ενεργό</span>
+        </div>
+      </div>
+
+      <div class="editor-wrapper">
+        <textarea id="code-editor"></textarea>
+      </div>
+
+      <!-- Μπάρα Εκπαιδευτικού Ελέγχου Λαθών -->
+      <div class="validation-bar">
+        <div class="validation-status" id="validation-status">
+          <span class="status-ok">🟢 Όλα εντάξει!</span>
+        </div>
+        <div class="validation-tip" id="validation-tip">
+          Ο κώδικάς σας είναι έτοιμος.
+        </div>
+      </div>
+    </section>
+
+    <!-- GUTTER 2: RESIZER EDITOR / PREVIEW -->
+    <div id="gutter-preview" class="gutter"></div>
+
+    <!-- RIGHT PANEL: INTERNAL LIVE BROWSER PREVIEW -->
+    <section class="preview-panel">
+      <div class="browser-header">
+        <div class="browser-controls">
+          <button id="btn-preview-refresh" class="browser-btn" title="Ανανέωση προεπισκόπησης (F5)">
+            🔄
+          </button>
+        </div>
+        <div class="address-bar">
+          <span class="address-icon">🔒</span>
+          <span>http://localhost:3000/preview.html</span>
+        </div>
+        <div class="device-switcher">
+          <button id="btn-device-desktop" class="device-btn active" title="Προβολή Desktop">🖥️</button>
+          <button id="btn-device-tablet" class="device-btn" title="Προβολή Tablet (768px)">📱</button>
+          <button id="btn-device-mobile" class="device-btn" title="Προβολή Κινητού (375px)">📲</button>
+        </div>
+        <button id="btn-preview-edge" class="browser-btn" title="Άνοιγμα απευθείας στον Edge">
+          ↗️
+        </button>
+      </div>
+
+      <div class="preview-container">
+        <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM STATUS BAR -->
+  <footer class="status-bar">
+    <div class="status-left">
+      <div class="status-item">
+        <span>🌐</span> EduHTML v1.0.0
+      </div>
+      <div class="status-item" id="status-save">
+        ✔ Αποθηκευμένο
+      </div>
+    </div>
+    <div class="status-right">
+      <div class="status-item" id="status-cursor">
+        Γραμμή 1, Στήλη 1
+      </div>
+      <div class="status-item">
+        <span>UTF-8</span>
+      </div>
+      <div class="status-item">
+        <span>HTML5 &amp; CSS3</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- TEMPLATES MODAL -->
+  <div id="templates-modal" class="modal-overlay">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>💡</span> Εκπαιδευτικά Πρότυπα (Starter Templates)
+        </div>
+        <button class="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-muted); font-size: 13px;">
+          Επιλέξτε ένα από τα παρακάτω πρότυπα για άμεση εξάσκηση και εκκίνηση του μαθήματος:
+        </p>
+        <div id="templates-grid" class="templates-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal-overlay">
+    <div class="modal-window" style="max-width: 620px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>⚙️</span> Ρυθμίσεις Εφαρμογής
+        </div>
+        <button class="modal-close">✕</button>
+      </div>
+      <div class="modal-body" style="gap: 18px;">
+        <!-- Επιλογή Browser -->
+        <div class="settings-group">
+          <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 5px; font-size: 13.5px;">
+            🌐 Επιλογή Εξωτερικού Browser:
+          </label>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+            Επιλέξτε το πρόγραμμα περιήγησης που θα εκτελείται στο κουμπί «Προβολή» και κατά τη σύνδεση στο e-Class.
+          </p>
+          <select id="setting-browser-select" style="width: 100%; padding: 8px 10px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); font-size: 13px;">
+            <option value="msedge">Microsoft Edge (Προεπιλογή Windows 11)</option>
+            <option value="chrome">Google Chrome</option>
+            <option value="firefox">Mozilla Firefox</option>
+            <option value="brave">Brave Browser</option>
+            <option value="default">Προεπιλεγμένος Browser των Windows</option>
+          </select>
+        </div>
+
+        <!-- Επιλογή Φακέλου Αποθήκευσης -->
+        <div class="settings-group">
+          <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 5px; font-size: 13.5px;">
+            📁 Προεπιλεγμένος Φάκελος Αποθήκευσης:
+          </label>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+            Ο αρχικός φάκελος αποθήκευσης των μαθητικών αρχείων (αρχικά: <code>My Documents/mywebpages</code>).
+          </p>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="setting-folder-input" readonly style="flex: 1; padding: 8px 10px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); font-size: 12px;">
+            <button id="btn-browse-folder" class="btn" style="white-space: nowrap;">📁 Αλλαγή...</button>
+          </div>
+        </div>
+
+        <!-- Παραμετροποίηση Λειτουργίας Αρχάριος -->
+        <div class="settings-group" style="padding-top: 12px; border-top: 1px solid var(--border);">
+          <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 6px; font-size: 13.5px;">
+            🌱 Προσαρμογή Λειτουργίας «Αρχάριος»:
+          </label>
+          <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-main); line-height: 1.4;">
+            <input type="checkbox" id="setting-hide-beginner-controls" style="margin-top: 2px; width: 16px; height: 16px; cursor: pointer;">
+            <span>Απόκρυψη των κουμπιών [Αρχάριος/Προχωρημένος] και [Πρότυπα] όταν είναι ενεργή η λειτουργία «Αρχάριος» (για απλούστευση της οθόνης)</span>
+          </label>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 5px; padding-left: 24px;">
+            Ιδανικό για τα πρώτα μαθήματα στην Α' Λυκείου ώστε οι μαθητές να επικεντρώνονται μόνο στη συγγραφή.
+          </p>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border);">
+          <button id="btn-save-settings" class="btn btn-primary" style="padding: 8px 20px;">
+            💾 Αποθήκευση Ρυθμίσεων
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABOUT MODAL -->
+  <div id="about-modal" class="modal-overlay">
+    <div class="modal-window about-modal-window" style="max-width: 560px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>ℹ️</span> Σχετικά με το EduHTML Studio
+        </div>
+        <button class="modal-close">✕</button>
+      </div>
+      <div class="modal-body about-modal-body">
+        
+        <!-- Creator Profile Card -->
+        <div class="about-creator-card">
+          <div class="about-avatar-wrapper">
+            <img src="assets/my_avatar.jpg" alt="Λέων Προκόπης" class="about-avatar-img">
+          </div>
+          <div class="about-creator-details">
+            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.0</span></div>
+            <div class="about-creator-name">Λέων Προκόπης</div>
+            <div class="about-creator-role">Καθηγητής Πληροφορικής ΠΕ86</div>
+            <div class="about-creator-school">2ο ΓΕΛ Ναυπλίου</div>
+          </div>
+        </div>
+
+        <p class="about-desc">
+          Εξειδικευμένο εκπαιδευτικό περιβάλλον συγγραφής και άμεσης εκτέλεσης HTML5 &amp; CSS3, σχεδιασμένο ειδικά για τη διδασκαλία στις σχολικές μονάδες της Δευτεροβάθμιας Εκπαίδευσης:
+        </p>
+
+        <div class="about-target-schools">
+          <div class="target-chip">🏛️ Α' Τάξη ΓΕΛ — Εφαρμογές Πληροφορικής</div>
+          <div class="target-chip">💻 ΕΠΑΛ — Τομέας Πληροφορικής (Σχεδίαση Ιστοτόπων)</div>
+        </div>
+
+        <!-- License & Terms Summary Box -->
+        <div class="license-summary-box">
+          <div class="license-badge">
+            <span>⚖️</span> Άδεια Χρήσης: Creative Commons (CC BY-NC 4.0)
+          </div>
+          <div class="license-bullets">
+            <div>✓ <strong>Ελεύθερη &amp; Δωρεάν Χρήση:</strong> Επιτρέπεται η χρήση και αναπαραγωγή για εκπαιδευτικούς σκοπούς.</div>
+            <div>✓ <strong>Αναφορά Δημιουργού:</strong> Απαιτείται αναφορά στον δημιουργό (Λέων Προκόπης).</div>
+            <div>✕ <strong>Μη Εμπορική Χρήση:</strong> Απαγορεύεται ρητά οποιαδήποτε μεταπώληση ή εμπορική εκμετάλλευση.</div>
+          </div>
+        </div>
+
+        <!-- Buttons row: Terms & Shortcuts -->
+        <div class="about-actions-row">
+          <button id="btn-show-terms" class="btn btn-outline-accent">
+            <span>📜</span> Όροι Χρήσης &amp; Άδεια
+          </button>
+          <button id="btn-show-shortcuts" class="btn btn-outline-secondary">
+            <span>⌨️</span> Συντομεύσεις Πληκτρολογίου
+          </button>
+        </div>
+
+        <!-- Collapsible: Full Terms of Use -->
+        <div id="about-terms-section" class="about-collapsible-section" style="display: none;">
+          <div class="collapsible-header">
+            <strong>📜 Όροι Χρήσης &amp; Άδεια Λογισμικού (CC BY-NC 4.0)</strong>
+          </div>
+          <div class="collapsible-content">
+            <p>Το λογισμικό <strong>EduHTML Studio</strong> παραχωρείται υπό τους όρους της διεθνούς άδειας <strong>Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)</strong>:</p>
+            <ol>
+              <li><strong>Εκπαιδευτική &amp; Μη Εμπορική Χρήση:</strong> Το πρόγραμμα διατίθεται απολύτως δωρεάν σε μαθητές, εκπαιδευτικούς, σχολεία (ΓΕΛ &amp; ΕΠΑΛ) και κάθε ενδιαφερόμενο.</li>
+              <li><strong>Απαγόρευση Μεταπώλησης:</strong> Απαγορεύεται ρητά η άμεση ή έμμεση πώληση, μεταπώληση ή ενοικίαση του λογισμικού ή μέρους αυτού.</li>
+              <li><strong>Υποχρεωτική Αναφορά Δημιουργού:</strong> Σε οποιαδήποτε δημόσια παρουσίαση, αναδιανομή ή παραλλαγή, πρέπει να διατηρούνται ακέραια τα στοιχεία του δημιουργού: <em>Λέων Προκόπης, Καθηγητής Πληροφορικής ΠΕ86, 2ο ΓΕΛ Ναυπλίου</em>.</li>
+              <li><strong>Αποποίηση Ευθύνης:</strong> Το λογισμικό παρέχεται «ως έχει» (as-is), για εκπαιδευτικούς σκοπούς, χωρίς καμία εγγύηση καταλληλότητας.</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Collapsible: Keyboard Shortcuts -->
+        <div id="about-shortcuts-section" class="about-collapsible-section" style="display: none;">
+          <div class="collapsible-header">
+            <strong>⌨️ Συντομεύσεις Πληκτρολογίου</strong>
+          </div>
+          <div class="collapsible-content">
+            <div class="shortcuts-grid">
+              <div><kbd>Ctrl + S</kbd> <span>Αποθήκευση αρχείου</span></div>
+              <div><kbd>Ctrl + O</kbd> <span>Άνοιγμα αρχείου</span></div>
+              <div><kbd>Ctrl + B</kbd> <span>Προβολή στον Browser</span></div>
+              <div><kbd>Ctrl + G</kbd> <span>Εμφάνιση / Απόκρυψη Οδηγού</span></div>
+              <div><kbd>F5</kbd> <span>Ανανέωση προεπισκόπησης</span></div>
+              <div><kbd>F11</kbd> <span>Πλήρης Οθόνη</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- WELCOME / SPLASH OVERLAY BANNER -->
+  <div id="splash-overlay" class="splash-overlay active">
+    <div class="splash-card">
+      <button id="splash-close-btn" class="splash-close-btn" title="Κλείσιμο">✕</button>
+      <div class="splash-badge">
+        <span>⚡</span> ΕΚΠΑΙΔΕΥΤΙΚΟ ΛΟΓΙΣΜΙΚΟ
+      </div>
+      <div class="splash-logo">
+        <span class="splash-icon">⟨/⟩</span>
+        <h1 class="splash-title">EduHTML Studio</h1>
+      </div>
+      <p class="splash-subtitle">Εκπαιδευτικό Περιβάλλον Εκμάθησης HTML5 &amp; CSS3</p>
+      
+      <div class="splash-divider"></div>
+
+      <div class="splash-creator">
+        <div class="creator-avatar">
+          <img src="assets/my_avatar.jpg" alt="Λέων Προκόπης" class="creator-avatar-img">
+        </div>
+        <div class="creator-info">
+          <div class="creator-name">Λέων Προκόπης</div>
+          <div class="creator-role">Καθηγητής Πληροφορικής ΠΕ86</div>
+          <div class="creator-school">2ο ΓΕΛ Ναυπλίου</div>
+        </div>
+      </div>
+
+      <div class="splash-footer">
+        <button id="splash-start-btn" class="splash-btn-start">
+          <span>Έναρξη Εργασίας</span> ➔
+        </button>
+      </div>
+      <div class="splash-timer-bar">
+        <div class="splash-timer-progress"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast">Ειδοποίηση</div>
+
+  <!-- SCRIPTS -->
+  <!-- JSZip for exporting to ZIP -->
+  <script src="vendor/jszip/jszip.min.js"></script>
+  
+  <!-- CodeMirror & Modes -->
+  <script src="vendor/codemirror/codemirror.js"></script>
+  <script src="vendor/codemirror/xml.js"></script>
+  <script src="vendor/codemirror/javascript.js"></script>
+  <script src="vendor/codemirror/css.js"></script>
+  <script src="vendor/codemirror/htmlmixed.js"></script>
+  <script src="vendor/codemirror/xml-fold.js"></script>
+  <script src="vendor/codemirror/closetag.js"></script>
+  <script src="vendor/codemirror/closebrackets.js"></script>
+
+  <!-- Educational Data & Main App -->
+  <script src="js/guide-data.js"></script>
+  <script src="js/templates-data.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
