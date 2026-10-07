@@ -28,41 +28,87 @@
       token.end = cur.ch;
       token.string = token.string.slice(0, cur.ch - token.start);
     }
-    var inner = CodeMirror.innerMode(cm.getMode(), token.state);
-    if (!inner.mode.xmlCurrentTag) return
-    var result = [], replaceToken = false, prefix;
-    var tag = /\btag\b/.test(token.type) && !/>$/.test(token.string);
-    var tagName = tag && /^\w/.test(token.string), tagStart;
 
-    if (tagName) {
-      var before = cm.getLine(cur.line).slice(Math.max(0, token.start - 2), token.start);
-      var tagType = /<\/$/.test(before) ? "close" : /<$/.test(before) ? "open" : null;
-      if (tagType) tagStart = token.start - (tagType == "close" ? 2 : 1);
-    } else if (tag && token.string == "<") {
-      tagType = "open";
-    } else if (tag && token.string == "</") {
-      tagType = "close";
+    var lineText = cm.getLine(cur.line);
+    var beforeCursor = lineText.slice(0, cur.ch);
+    var openMatch = beforeCursor.match(/<([a-zA-Z0-9_\-:]*)$/);
+    var closeMatch = beforeCursor.match(/<\/([a-zA-Z0-9_\-:]*)$/);
+
+    var result = [], replaceToken = false, prefix, tagStart, tagType;
+
+    // Αν πληκτρολογούμε μετά από < ή </
+    if (openMatch || closeMatch) {
+      tagType = closeMatch ? "close" : "open";
+      prefix = closeMatch ? closeMatch[1].toLowerCase() : openMatch[1].toLowerCase();
+      tagStart = cur.ch - prefix.length - (tagType == "close" ? 2 : 1);
+      replaceToken = true;
+
+      var innerMode = CodeMirror.innerMode(cm.getMode(), token.state);
+      var context = (innerMode.mode && innerMode.mode.xmlCurrentContext) ? innerMode.mode.xmlCurrentContext(innerMode.state) : [];
+      var currentInner = context.length && context[context.length - 1];
+
+      if (tagType == "close") {
+        if (currentInner && (!prefix || matches(currentInner, prefix, matchInMiddle))) {
+          result.push({
+            text: "</" + currentInner + ">",
+            displayText: "/" + currentInner
+          });
+        }
+      } else {
+        var VOID_TAGS = {
+          'area': true, 'base': true, 'br': true, 'col': true, 'embed': true,
+          'hr': true, 'img': true, 'input': true, 'link': true, 'meta': true,
+          'param': true, 'source': true, 'track': true, 'wbr': true
+        };
+
+        // Ελέγχουμε αν υπάρχει ήδη '>' αμέσως μετά τον κέρσορα
+        var afterCursor = lineText.slice(cur.ch);
+        var hasGT = afterCursor.charAt(0) === '>';
+        var replaceEndCh = hasGT ? (cur.ch + 1) : cur.ch;
+
+        var allTagNames = Object.keys(tags).filter(function(k) {
+          return k !== "!top" && k !== "!attrs";
+        });
+        allTagNames.sort();
+        for (var i = 0; i < allTagNames.length; i++) {
+          var name = allTagNames[i];
+          if (!prefix || matches(name, prefix, matchInMiddle)) {
+            var isVoid = !!VOID_TAGS[name];
+            var insertFull = isVoid ? ("<" + name + ">") : ("<" + name + "></" + name + ">");
+            var cursorOffset = name.length + 2; // τοποθετεί τον κέρσορα ακριβώς μετά το <tag>
+
+            (function(tagName, fullText, offset, endCh) {
+              result.push({
+                text: fullText,
+                displayText: tagName,
+                hint: function(editor, data, curHint) {
+                  var from = data.from;
+                  var to = Pos(cur.line, endCh);
+                  editor.replaceRange(fullText, from, to);
+                  // Τοποθέτηση του κέρσορα ανάμεσα στο <tag> και </tag>
+                  editor.setCursor({
+                    line: from.line,
+                    ch: from.ch + offset
+                  });
+                }
+              });
+            })(name, insertFull, cursorOffset, replaceEndCh);
+          }
+        }
+      }
+
+      return {
+        list: result,
+        from: Pos(cur.line, tagStart),
+        to: Pos(cur.line, cur.ch)
+      };
     }
 
-    var tagInfo = inner.mode.xmlCurrentTag(inner.state)
-    if (!tag && !tagInfo || tagType) {
-      if (tagName)
-        prefix = token.string;
-      replaceToken = tagType;
-      var context = inner.mode.xmlCurrentContext ? inner.mode.xmlCurrentContext(inner.state) : []
-      var inner = context.length && context[context.length - 1]
-      var curTag = inner && tags[inner]
-      var childList = inner ? curTag && curTag.children : tags["!top"];
-      if (childList && tagType != "close") {
-        for (var i = 0; i < childList.length; ++i) if (!prefix || matches(childList[i], prefix, matchInMiddle))
-          result.push("<" + childList[i]);
-      } else if (tagType != "close") {
-        for (var name in tags)
-          if (tags.hasOwnProperty(name) && name != "!top" && name != "!attrs" && (!prefix || matches(name, prefix, matchInMiddle)))
-            result.push("<" + name);
-      }
-      if (inner && (!prefix || tagType == "close" && matches(inner, prefix, matchInMiddle)))
-        result.push("</" + inner + ">");
+    var inner = CodeMirror.innerMode(cm.getMode(), token.state);
+    var tagInfo = inner.mode.xmlCurrentTag ? inner.mode.xmlCurrentTag(inner.state) : null;
+
+    if (!tagInfo) {
+      return;
     } else {
       // Attribute completion
       var curTag = tagInfo && tags[tagInfo.name], attrs = curTag && curTag.attrs;

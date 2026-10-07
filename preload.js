@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFile: (data) => ipcRenderer.invoke('dialog:saveFile', data),
   saveFileDirect: (data) => ipcRenderer.invoke('app:saveFileDirect', data),
   openInExternalBrowser: (data) => ipcRenderer.invoke('app:openInExternalBrowser', data),
+  getVersion: () => ipcRenderer.invoke('app:getVersion'),
   
   // Settings & Folder Management
   getSettings: () => ipcRenderer.invoke('settings:get'),

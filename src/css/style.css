@@ -205,15 +205,27 @@ body {
 }
 
 .btn-primary {
-  background-color: #2563eb;
+  background-color: #2563eb !important;
   color: #ffffff !important;
-  border-color: #3b82f6;
+  border: 1px solid #1d4ed8 !important;
   font-weight: 800;
 }
 
 .btn-primary:hover {
-  background-color: #1d4ed8;
-  border-color: #2563eb;
+  background-color: #1d4ed8 !important;
+  border-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .btn-primary {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border: 1px solid #1d4ed8 !important;
+}
+
+[data-theme="light"] .btn-primary:hover {
+  background-color: #1d4ed8 !important;
+  color: #ffffff !important;
 }
 
 #btn-eclass {
@@ -582,66 +594,90 @@ body {
   color: #64748b !important;
 }
 
-/* CODEMIRROR AUTOCOMPLETE / HINT POPUP */
+/* CODEMIRROR AUTOCOMPLETE / NOTEPAD++ STYLE HINT POPUP */
 .CodeMirror-hints {
   position: absolute;
   z-index: 10000;
   overflow: hidden;
   list-style: none;
   margin: 0;
-  padding: 4px;
-  border-radius: 8px;
-  background: #1e293b !important;
-  border: 1px solid #3b82f6 !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.25) !important;
-  font-family: var(--font-code) !important;
-  font-size: 13px !important;
-  max-height: 220px;
-  min-width: 160px;
+  padding: 3px;
+  border-radius: 6px;
+  background: #ffffff !important;
+  border: 1px solid #94a3b8 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0,0,0,0.15) !important;
+  font-family: 'Consolas', 'Cascadia Code', 'Courier New', monospace !important;
+  font-size: 15px !important;
+  line-height: 1.4 !important;
+  max-height: 250px;
+  min-width: 170px;
   overflow-y: auto;
   box-sizing: border-box;
 }
 
 .CodeMirror-hint {
-  margin: 1px 0;
-  padding: 4px 10px;
-  border-radius: 4px;
+  margin: 0;
+  padding: 3px 8px 3px 24px;
+  border-radius: 3px;
   white-space: pre;
-  color: #f1f5f9 !important;
+  color: #0f172a !important;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  position: relative;
+  font-weight: 500;
+}
+
+/* Notepad++ style tag icon: small square symbol next to each item */
+.CodeMirror-hint::before {
+  content: '▫';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #64748b;
 }
 
 .CodeMirror-hint:hover {
-  background: rgba(56, 189, 248, 0.15) !important;
-  color: #38bdf8 !important;
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
 }
 
 li.CodeMirror-hint-active {
-  background: #2563eb !important;
+  background: #0078d4 !important; /* Notepad++ / Windows active blue */
   color: #ffffff !important;
   font-weight: 700;
 }
 
-[data-theme="light"] .CodeMirror-hints {
-  background: #ffffff !important;
-  border: 1px solid #3b82f6 !important;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2), 0 0 12px rgba(37, 99, 235, 0.15) !important;
+li.CodeMirror-hint-active::before {
+  color: #ffffff !important;
 }
 
-[data-theme="light"] .CodeMirror-hint {
-  color: #0f172a !important;
+/* Dark Theme variant preserving the crisp Notepad++ feel */
+[data-theme="dark"] .CodeMirror-hints {
+  background: #1e293b !important;
+  border: 1px solid #475569 !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6) !important;
 }
 
-[data-theme="light"] .CodeMirror-hint:hover {
-  background: #eff6ff !important;
-  color: #2563eb !important;
+[data-theme="dark"] .CodeMirror-hint {
+  color: #f8fafc !important;
 }
 
-[data-theme="light"] li.CodeMirror-hint-active {
-  background: #2563eb !important;
+[data-theme="dark"] .CodeMirror-hint::before {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .CodeMirror-hint:hover {
+  background: #334155 !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] li.CodeMirror-hint-active {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] li.CodeMirror-hint-active::before {
   color: #ffffff !important;
 }
 
@@ -766,19 +802,24 @@ li.CodeMirror-hint-active {
 .validation-bar {
   background-color: var(--bg-secondary);
   border-top: 1px solid var(--border);
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 8px 16px;
+  min-height: 58px; /* Επαρκές ύψος για άνετη φιλοξενία 2 γραμμών */
+  font-size: 17.5px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 16px;
+  box-sizing: border-box;
 }
 
 .validation-status {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 17.5px;
+  flex-shrink: 0;
+  cursor: default;
 }
 
 .status-ok {
@@ -794,11 +835,19 @@ li.CodeMirror-hint-active {
 }
 
 .validation-tip {
-  color: var(--text-muted);
-  font-size: 11.5px;
+  flex: 1;
+  color: var(--text-main);
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  cursor: default;
+  /* Εμφάνιση έως 2 γραμμών μηνύματος/συμβουλής */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 /* BOTTOM STATUS BAR */

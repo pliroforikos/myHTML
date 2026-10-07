@@ -217,6 +217,10 @@ ipcMain.handle('dialog:openFile', async (event, filters) => {
   return null;
 });
 
+ipcMain.handle('app:getVersion', () => {
+  return app.getVersion();
+});
+
 ipcMain.handle('settings:get', () => {
   return loadSettings();
 });

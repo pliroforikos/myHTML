@@ -110,9 +110,33 @@ document.addEventListener('DOMContentLoaded', () => {
   try { initSettings(); } catch (e) { console.error('Settings init:', e); }
   try { setupEventListeners(); } catch (e) { console.error('Listeners init:', e); }
   try { setupElectronMenuBridge(); } catch (e) { console.error('Menu bridge:', e); }
+  try { initAppVersion(); } catch (e) { console.error('Version init:', e); }
   try { updateLivePreview(); } catch (e) { console.error('Preview update:', e); }
   try { validateHtmlCode(); } catch (e) { console.error('Validation:', e); }
 });
+
+// Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
+async function initAppVersion() {
+  let appVersion = '1.3.0';
+  if (window.electronAPI && window.electronAPI.getVersion) {
+    try {
+      const v = await window.electronAPI.getVersion();
+      if (v) appVersion = v;
+    } catch (err) {
+      console.warn('Could not fetch app version from electron:', err);
+    }
+  }
+
+  const statusVersionEl = document.getElementById('status-version');
+  if (statusVersionEl) {
+    statusVersionEl.innerHTML = `<span>🌐</span> EduHTML v${appVersion}`;
+  }
+
+  const aboutVersionEls = document.querySelectorAll('.about-app-version');
+  aboutVersionEls.forEach(el => {
+    el.textContent = `v${appVersion}`;
+  });
+}
 
 // Διαχείριση Banner Καλωσορίσματος / Splash Screen
 let splashTimer = null;
@@ -170,10 +194,12 @@ function initEditor() {
   editor.on('inputRead', (cm, change) => {
     if (change.origin === '+input' || change.origin === 'paste') {
       const text = change.text ? change.text[0] : '';
-      // Αν ο χρήστης πληκτρολόγησε '<' ή γράμμα/χαρακτήρα
-      if (text === '<' || /^[a-zA-Z0-9_\-:]$/.test(text)) {
+      if (!text || text === ' ' || text === '\n' || text === '\t') return;
+      
+      // Μικρό setTimeout ώστε το CodeMirror να έχει ενημερώσει πλήρως το κείμενο και τη θέση του κέρσορα
+      setTimeout(() => {
         triggerAutocomplete(cm);
-      }
+      }, 20);
     }
   });
 
@@ -190,14 +216,25 @@ function initEditor() {
 function triggerAutocomplete(cm) {
   if (cm.state.completionActive) return; // Ήδη ενεργό παράθυρο προτάσεων
 
+  const cursor = cm.getCursor();
+  const line = cm.getLine(cursor.line);
+  const beforeCursor = line.slice(0, cursor.ch);
+
   if (activeTab === 'html') {
-    cm.showHint({
-      hint: CodeMirror.hints.html || CodeMirror.hints.xml,
-      completeSingle: false
-    });
+    // Εμφάνιση προτάσεων μόνο αν βρισκόμαστε σε tag ή πληκτρολογούμε μετά από < ή μέσα σε όνομα tag/attribute
+    const isInsideTag = /<[a-zA-Z0-9_\-:]*$/.test(beforeCursor) || /<\/?[a-zA-Z0-9_\-:]*$/.test(beforeCursor);
+    const token = cm.getTokenAt(cursor);
+    const isInTagToken = token.type === 'tag' || token.type === 'attribute' || token.type === 'string' || isInsideTag;
+
+    if (isInTagToken || beforeCursor.endsWith('<')) {
+      cm.showHint({
+        hint: (CodeMirror.hint && (CodeMirror.hint.html || CodeMirror.hint.xml)) || (CodeMirror.hints && CodeMirror.hints.html),
+        completeSingle: false
+      });
+    }
   } else if (activeTab === 'css') {
     cm.showHint({
-      hint: CodeMirror.hints.css,
+      hint: (CodeMirror.hint && CodeMirror.hint.css) || (CodeMirror.hints && CodeMirror.hints.css),
       completeSingle: false
     });
   }
@@ -479,6 +516,21 @@ function insertCodeToEditor(code, targetDocType) {
   showToast('Ο κώδικας εισήχθη επιτυχώς!');
 }
 
+// Έγκυρες πρότυπες ετικέτες HTML5 (για ανίχνευση ορθογραφικών λαθών)
+const VALID_HTML5_TAGS = new Set([
+  'html', 'head', 'title', 'base', 'link', 'meta', 'style', 'script', 'noscript',
+  'body', 'section', 'nav', 'article', 'aside', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'header', 'footer', 'address', 'main', 'p', 'hr', 'pre', 'blockquote', 'ol', 'ul',
+  'menu', 'li', 'dl', 'dt', 'dd', 'figure', 'figcaption', 'div', 'a', 'em', 'strong',
+  'small', 's', 'cite', 'q', 'dfn', 'abbr', 'ruby', 'rt', 'rp', 'data', 'time',
+  'code', 'var', 'samp', 'kbd', 'sub', 'sup', 'i', 'b', 'u', 'mark', 'bdi', 'bdo',
+  'span', 'br', 'wbr', 'ins', 'del', 'picture', 'source', 'img', 'iframe', 'embed',
+  'object', 'video', 'audio', 'track', 'map', 'area', 'table', 'caption', 'colgroup',
+  'col', 'tbody', 'thead', 'tfoot', 'tr', 'td', 'th', 'form', 'label', 'input',
+  'button', 'select', 'datalist', 'optgroup', 'option', 'textarea', 'output',
+  'progress', 'meter', 'fieldset', 'legend', 'details', 'summary', 'dialog', 'svg'
+]);
+
 // Εκπαιδευτικός Έλεγχος & Βοηθός Σφαλμάτων για Μαθητές
 function validateHtmlCode() {
   const code = htmlDoc.getValue();
@@ -487,17 +539,88 @@ function validateHtmlCode() {
 
   const warnings = [];
 
-  // Έλεγχος DOCTYPE
+  // 1. Έλεγχος DOCTYPE
   if (!code.toLowerCase().includes('<!doctype html>')) {
     warnings.push('Λείπει η δήλωση <!DOCTYPE html> στην αρχή του εγγράφου.');
   }
 
-  // Έλεγχος βασικών ετικετών
+  // 2. Έλεγχος βασικών ετικετών <html>
   if (!code.includes('<html') || !code.includes('</html>')) {
     warnings.push('Βεβαιωθείτε ότι υπάρχει το ζεύγος ετικετών <html> και </html>.');
   }
 
-  // Έλεγχος εικόνων χωρίς alt
+  // 3. Έλεγχος για άγνωστες / ανορθόγραφες ετικέτες ή ετικέτες με ελληνικούς χαρακτήρες
+  const cleanedCode = code.replace(/<!--[\s\S]*?-->/g, ''); // Αγνοούμε σχόλια HTML
+  const allTagMatches = cleanedCode.matchAll(/<\/?([^\s>\/!][^\s>\/]*)/gu);
+  const unknownTagsFound = new Set();
+  const greekTagsFound = new Set();
+
+  for (const m of allTagMatches) {
+    const rawTag = m[1];
+    const tagName = rawTag.toLowerCase();
+
+    // Έλεγχος αν η ετικέτα περιέχει ελληνικούς χαρακτήρες (συχνό λάθος μαθητών)
+    if (/[\u0370-\u03ff\u1f00-\u1fff]/i.test(rawTag)) {
+      greekTagsFound.add(rawTag);
+    } else if (!VALID_HTML5_TAGS.has(tagName) && !tagName.startsWith('!') && !tagName.startsWith('?')) {
+      unknownTagsFound.add(rawTag);
+    }
+  }
+
+  if (greekTagsFound.size > 0) {
+    const greekList = Array.from(greekTagsFound).map(t => `<${t}>`).join(', ');
+    warnings.push(`Λάθος γλώσσα ετικέτας: Οι ετικέτες HTML γράφονται μόνο με λατινικούς χαρακτήρες (βρέθηκαν: ${greekList}).`);
+  }
+
+  if (unknownTagsFound.size > 0) {
+    const list = Array.from(unknownTagsFound).map(t => `<${t}>`).join(', ');
+    warnings.push(`Εντοπίστηκαν μη έγκυρες ή ανορθόγραφες ετικέτες: ${list}`);
+  }
+
+  // 4. Έλεγχος σωστής σειράς και ιεραρχίας βασικών τμημάτων (<head>, <body>, <html>)
+  const lower = code.toLowerCase();
+  const htmlOpen = lower.indexOf('<html');
+  const htmlClose = lower.indexOf('</html>');
+  const headOpen = lower.indexOf('<head');
+  const headClose = lower.indexOf('</head>');
+  const bodyOpen = lower.indexOf('<body');
+  const bodyClose = lower.indexOf('</body>');
+
+  if (htmlClose !== -1) {
+    // Έλεγχος αν γράφτηκε κώδικας έξω ή μετά το </html> (όπως στο screenshot)
+    const afterHtml = code.slice(htmlClose + 7).trim();
+    if (afterHtml.length > 0 && afterHtml.includes('<')) {
+      warnings.push('Εντοπίστηκε κώδικας μετά το κλείσιμο </html>. Όλα τα στοιχεία πρέπει να βρίσκονται μέσα στο <html>...</html>.');
+    }
+  }
+
+  if (headOpen !== -1 && bodyOpen !== -1 && headOpen > bodyOpen) {
+    warnings.push('Λάθος ιεραρχία: Το τμήμα <head> πρέπει να προηγείται του τμήματος <body>.');
+  }
+
+  if (headOpen !== -1 && headClose !== -1 && headOpen > headClose) {
+    warnings.push('Λάθος ιεραρχία: Η ετικέτα </head> προηγείται του ανοίγματος <head>.');
+  }
+
+  if (bodyOpen !== -1 && bodyClose !== -1 && bodyOpen > bodyClose) {
+    warnings.push('Λάθος ιεραρχία: Η ετικέτα </body> προηγείται του ανοίγματος <body>.');
+  }
+
+  // 5. Έλεγχος μη κλεισμένων ετικετών για κοινές δομές
+  const tagsToCheck = ['table', 'ul', 'ol', 'form', 'div', 'p', 'head', 'body', 'title', 'h1', 'h2', 'h3'];
+  for (const tag of tagsToCheck) {
+    const openCount = (code.match(new RegExp(`<${tag}(\\s|>|$)`, 'gi')) || []).length;
+    const closeCount = (code.match(new RegExp(`</${tag}>`, 'gi')) || []).length;
+    if (openCount > closeCount) {
+      warnings.push(`Προσοχή: Βρέθηκαν ${openCount} ανοιγμένες ετικέτες <${tag}> αλλά μόνο ${closeCount} ετικέτες κλεισίματος </${tag}>.`);
+      break;
+    } else if (closeCount > openCount) {
+      warnings.push(`Προσοχή: Βρέθηκαν ${closeCount} ετικέτες κλεισίματος </${tag}> αλλά μόνο ${openCount} ανοίγματα <${tag}>.`);
+      break;
+    }
+  }
+
+  // 6. Έλεγχος εικόνων χωρίς alt
   const imgMatches = code.match(/<img[^>]*>/gi) || [];
   for (const img of imgMatches) {
     if (!img.toLowerCase().includes('alt=')) {
@@ -506,7 +629,7 @@ function validateHtmlCode() {
     }
   }
 
-  // Έλεγχος συνδέσμων χωρίς href
+  // 7. Έλεγχος συνδέσμων χωρίς href
   const aMatches = code.match(/<a[^>]*>/gi) || [];
   for (const a of aMatches) {
     if (!a.toLowerCase().includes('href=')) {
@@ -515,23 +638,18 @@ function validateHtmlCode() {
     }
   }
 
-  // Έλεγχος αταίριαστων ετικετών για κοινές ετικέτες
-  const tagsToCheck = ['table', 'ul', 'ol', 'form', 'div', 'p'];
-  for (const tag of tagsToCheck) {
-    const openCount = (code.match(new RegExp(`<${tag}(\\s|>|$)`, 'gi')) || []).length;
-    const closeCount = (code.match(new RegExp(`</${tag}>`, 'gi')) || []).length;
-    if (openCount > closeCount) {
-      warnings.push(`Προσοχή: Βρέθηκαν ${openCount} ανοιγμένες ετικέτες <${tag}> αλλά μόνο ${closeCount} ετικέτες κλεισίματος </${tag}>.`);
-      break;
-    }
-  }
-
+  // Εμφάνιση αποτελέσματος
   if (warnings.length === 0) {
     statusEl.innerHTML = '<span class="status-ok">🟢 Όλα εντάξει!</span>';
+    statusEl.title = 'Δεν εντοπίστηκαν συντακτικά σφάλματα στον κώδικα.';
     tipEl.textContent = 'Ο κώδικάς σας είναι καθαρός και έτοιμος.';
+    tipEl.title = 'Ο κώδικάς σας είναι καθαρός και έτοιμος.';
   } else {
-    statusEl.innerHTML = `<span class="status-warning">⚠️ ${warnings.length} Σημείωση</span>`;
-    tipEl.textContent = warnings[0];
+    statusEl.innerHTML = `<span class="status-warning" style="color: #ef4444; font-weight: 700;">⚠️ ${warnings.length} ${warnings.length === 1 ? 'Σφάλμα / Παρατήρηση' : 'Σφάλματα / Παρατηρήσεις'}</span>`;
+    const fullTooltip = warnings.map((w, idx) => `${idx + 1}. ${w}`).join('\n');
+    statusEl.title = fullTooltip;
+    tipEl.textContent = warnings.join('  •  '); // Αν χωράει, εμφανίζει και επιπλέον πληροφορία
+    tipEl.title = fullTooltip;
   }
 }
 
