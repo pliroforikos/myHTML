@@ -22,14 +22,18 @@
     var tags = options && options.schemaInfo;
     var quote = (options && options.quoteChar) || '"';
     var matchInMiddle = options && options.matchInMiddle;
-    if (!tags) return;
-    var cur = cm.getCursor(), token = cm.getTokenAt(cur);
+    if (!tags || !cm) return;
+    var cur = cm.getCursor();
+    if (!cur) return;
+    var token = cm.getTokenAt(cur);
+    if (!token) return;
     if (token.end > cur.ch) {
       token.end = cur.ch;
       token.string = token.string.slice(0, cur.ch - token.start);
     }
 
     var lineText = cm.getLine(cur.line);
+    if (typeof lineText !== 'string') return;
     var beforeCursor = lineText.slice(0, cur.ch);
     var openMatch = beforeCursor.match(/<([a-zA-Z0-9_\-:]*)$/);
     var closeMatch = beforeCursor.match(/<\/([a-zA-Z0-9_\-:]*)$/);
@@ -40,7 +44,7 @@
     if (openMatch || closeMatch) {
       tagType = closeMatch ? "close" : "open";
       prefix = closeMatch ? closeMatch[1].toLowerCase() : openMatch[1].toLowerCase();
-      tagStart = cur.ch - prefix.length - (tagType == "close" ? 2 : 1);
+      tagStart = Math.max(0, cur.ch - prefix.length - (tagType == "close" ? 2 : 1));
       replaceToken = true;
 
       var innerMode = CodeMirror.innerMode(cm.getMode(), token.state);
@@ -83,12 +87,14 @@
                 displayText: tagName,
                 hint: function(editor, data, curHint) {
                   var from = data.from;
-                  var to = Pos(cur.line, endCh);
+                  var curLineContent = editor.getLine(from.line) || "";
+                  var safeEndCh = Math.min(curLineContent.length, Math.max(from.ch, endCh));
+                  var to = Pos(from.line, safeEndCh);
                   editor.replaceRange(fullText, from, to);
                   // Τοποθέτηση του κέρσορα ανάμεσα στο <tag> και </tag>
                   editor.setCursor({
                     line: from.line,
-                    ch: from.ch + offset
+                    ch: Math.min(curLineContent.length + fullText.length, from.ch + offset)
                   });
                 }
               });
