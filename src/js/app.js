@@ -111,13 +111,14 @@ document.addEventListener('DOMContentLoaded', () => {
   try { setupEventListeners(); } catch (e) { console.error('Listeners init:', e); }
   try { setupElectronMenuBridge(); } catch (e) { console.error('Menu bridge:', e); }
   try { initAppVersion(); } catch (e) { console.error('Version init:', e); }
+  try { initContextMenu(); } catch (e) { console.error('ContextMenu init:', e); }
   try { updateLivePreview(); } catch (e) { console.error('Preview update:', e); }
   try { validateHtmlCode(); } catch (e) { console.error('Validation:', e); }
 });
 
 // Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
 async function initAppVersion() {
-  let appVersion = '1.3.1';
+  let appVersion = '1.3.2';
   if (window.electronAPI && window.electronAPI.getVersion) {
     try {
       const v = await window.electronAPI.getVersion();
@@ -221,6 +222,12 @@ function initEditor() {
 
   editor.on('cursorActivity', () => {
     updateCursorInfo();
+  });
+
+  // Δεξί κλικ στον CodeMirror editor
+  editor.on('contextmenu', (cm, e) => {
+    e.preventDefault();
+    handleEditorContextMenu(cm, e);
   });
 }
 
@@ -365,6 +372,26 @@ function updateLivePreview() {
     // Αποτροπή κλοπής focus από autofocus στοιχεία του μαθητή στο ενσωματωμένο preview
     if (compiled) {
       compiled = compiled.replace(/\bautofocus\b/gi, 'data-autofocus');
+    }
+
+    // Υποστήριξη δεξιού κλικ μέσα στο ενσωματωμένο preview
+    const previewCtxScript = `\n<script>
+document.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+  var sel = window.getSelection() ? window.getSelection().toString() : '';
+  window.parent.postMessage({
+    type: 'preview-contextmenu',
+    clientX: e.clientX,
+    clientY: e.clientY,
+    selection: sel
+  }, '*');
+});
+<\/script>`;
+
+    if (compiled.includes('</body>')) {
+      compiled = compiled.replace('</body>', `${previewCtxScript}\n</body>`);
+    } else {
+      compiled += previewCtxScript;
     }
     
     previewFrame.srcdoc = compiled;
@@ -1229,4 +1256,485 @@ function setupElectronMenuBridge() {
   window.electronAPI.onMenuToggleMode(() => setMode(currentMode === 'beginner' ? 'advanced' : 'beginner'));
   window.electronAPI.onMenuFormatCode(() => formatCode());
   window.electronAPI.onMenuAbout(() => openModal('about-modal'));
+}
+
+// ==========================================================================
+// ΔΙΑΧΕΙΡΙΣΗ ΔΕΞΙΟΥ ΚΛΙΚ & CONTEXT MENU (WINDOWS 11 FLUENT STYLE)
+// ==========================================================================
+
+function initContextMenu() {
+  // Παρακολούθηση δεξιού κλικ σε ολόκληρο το παράθυρο
+  window.addEventListener('contextmenu', (e) => {
+    if (e.defaultPrevented) return;
+    e.preventDefault();
+    handleGeneralContextMenu(e);
+  });
+
+  // Κλείσιμο του μενού με πάτημα έξω από αυτό
+  window.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('#context-menu')) {
+      closeContextMenu();
+    }
+  });
+
+  // Κλείσιμο με Escape
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeContextMenu();
+    }
+  });
+
+  // Κλείσιμο σε αλλαγή μεγέθους παραθύρου
+  window.addEventListener('resize', closeContextMenu);
+
+  // Ακρόαση μηνυμάτων από το ενσωματωμένο preview iframe για δεξί κλικ
+  window.addEventListener('message', (ev) => {
+    if (ev.data && ev.data.type === 'preview-contextmenu') {
+      const frame = document.getElementById('preview-frame');
+      if (!frame) return;
+      const rect = frame.getBoundingClientRect();
+      const x = rect.left + (ev.data.clientX || 0);
+      const y = rect.top + (ev.data.clientY || 0);
+      const sel = ev.data.selection || '';
+
+      const items = [];
+      if (sel && sel.trim().length > 0) {
+        items.push({
+          id: 'copy',
+          icon: '📋',
+          label: 'Αντιγραφή',
+          shortcut: 'Ctrl+C',
+          action: async () => {
+            await writeToClipboard(sel);
+            showToast('Αντιγράφηκε στο πρόχειρο!');
+          }
+        });
+        items.push({ type: 'separator' });
+      }
+      items.push({
+        id: 'refresh',
+        icon: '🔄',
+        label: 'Ανανέωση Προεπισκόπησης',
+        shortcut: 'F5',
+        action: () => updateLivePreview()
+      });
+      items.push({
+        id: 'openBrowser',
+        icon: '🌐',
+        label: `Προβολή στον ${getBrowserName(appSettings.browser)}`,
+        shortcut: 'Ctrl+B',
+        action: () => openInExternalBrowser()
+      });
+      items.push({ type: 'separator' });
+      items.push({
+        id: 'fullscreen',
+        icon: '⛶',
+        label: 'Πλήρης Οθόνη',
+        shortcut: 'F11',
+        action: () => {
+          if (window.electronAPI && window.electronAPI.toggleFullScreen) {
+            window.electronAPI.toggleFullScreen();
+          }
+        }
+      });
+
+      openContextMenu(items, x, y);
+    }
+  });
+}
+
+// Διαχείριση δεξιού κλικ στον CodeMirror Editor
+async function handleEditorContextMenu(cm, e) {
+  if (!cm) return;
+
+  // Αν δεν υπάρχει επιλεγμένο κείμενο, μετακινούμε τον κέρσορα στη θέση που έγινε το κλικ
+  if (!cm.somethingSelected()) {
+    const coords = cm.coordsChar({ left: e.clientX, top: e.clientY });
+    if (coords) {
+      cm.setCursor(coords);
+    }
+  }
+
+  const hasSelection = cm.somethingSelected();
+  const history = cm.historySize();
+  const canUndo = !!(history && history.undo > 0);
+  const canRedo = !!(history && history.redo > 0);
+
+  const items = [
+    {
+      id: 'undo',
+      icon: '↩️',
+      label: 'Αναίρεση',
+      shortcut: 'Ctrl+Z',
+      disabled: !canUndo,
+      action: () => {
+        cm.undo();
+        cm.focus();
+      }
+    },
+    {
+      id: 'redo',
+      icon: '↪️',
+      label: 'Επανάληψη',
+      shortcut: 'Ctrl+Y',
+      disabled: !canRedo,
+      action: () => {
+        cm.redo();
+        cm.focus();
+      }
+    },
+    { type: 'separator' },
+    {
+      id: 'cut',
+      icon: '✂️',
+      label: 'Αποκοπή',
+      shortcut: 'Ctrl+X',
+      disabled: !hasSelection,
+      action: async () => {
+        const text = cm.getSelection();
+        if (text) {
+          await writeToClipboard(text);
+          cm.replaceSelection('');
+          cm.focus();
+          showToast('Αποκοπή επιτυχής!');
+        }
+      }
+    },
+    {
+      id: 'copy',
+      icon: '📋',
+      label: 'Αντιγραφή',
+      shortcut: 'Ctrl+C',
+      disabled: !hasSelection,
+      action: async () => {
+        const text = cm.getSelection();
+        if (text) {
+          await writeToClipboard(text);
+          cm.focus();
+          showToast('Αντιγράφηκε στο πρόχειρο!');
+        }
+      }
+    },
+    {
+      id: 'paste',
+      icon: '📥',
+      label: 'Επικόλληση',
+      shortcut: 'Ctrl+V',
+      disabled: false,
+      action: async () => {
+        const text = await readFromClipboard();
+        if (text) {
+          cm.replaceSelection(text);
+          cm.focus();
+          showToast('Επικόλληση επιτυχής!');
+        } else {
+          showToast('Το πρόχειρο είναι κενό.');
+        }
+      }
+    },
+    {
+      id: 'delete',
+      icon: '🗑️',
+      label: 'Διαγραφή',
+      shortcut: 'Del',
+      disabled: !hasSelection,
+      action: () => {
+        cm.replaceSelection('');
+        cm.focus();
+      }
+    },
+    { type: 'separator' },
+    {
+      id: 'selectAll',
+      icon: '🔲',
+      label: 'Επιλογή Όλων',
+      shortcut: 'Ctrl+A',
+      action: () => {
+        cm.execCommand('selectAll');
+        cm.focus();
+      }
+    },
+    { type: 'separator' },
+    {
+      id: 'format',
+      icon: '✨',
+      label: 'Μορφοποίηση Κώδικα (Beautify)',
+      shortcut: 'Shift+Alt+F',
+      action: () => {
+        formatCode();
+        cm.focus();
+      }
+    },
+    {
+      id: 'autocomplete',
+      icon: '💡',
+      label: 'Προτάσεις Εντολών',
+      shortcut: 'Ctrl+Space',
+      action: () => {
+        cm.focus();
+        triggerAutocomplete(cm);
+      }
+    },
+    { type: 'separator' },
+    {
+      id: 'save',
+      icon: '💾',
+      label: 'Αποθήκευση Αρχείου',
+      shortcut: 'Ctrl+S',
+      action: () => saveCurrentFile()
+    },
+    {
+      id: 'openBrowser',
+      icon: '🌐',
+      label: `Προβολή στον ${getBrowserName(appSettings.browser)}`,
+      shortcut: 'Ctrl+B',
+      action: () => openInExternalBrowser()
+    }
+  ];
+
+  openContextMenu(items, e.clientX, e.clientY);
+}
+
+// Διαχείριση δεξιού κλικ σε γενικά στοιχεία της σελίδας
+function handleGeneralContextMenu(e) {
+  // 1. Έλεγχος αν το κλικ έγινε μέσα στον Editor Panel (gutter, scroller, tabs)
+  if (e.target.closest('.editor-panel') && editor) {
+    handleEditorContextMenu(editor, e);
+    return;
+  }
+
+  // 2. Έλεγχος αν το κλικ έγινε σε πεδίο κειμένου input ή textarea
+  const targetInput = e.target.closest('input, textarea');
+  if (targetInput && !targetInput.closest('.CodeMirror')) {
+    const start = targetInput.selectionStart;
+    const end = targetInput.selectionEnd;
+    const hasInputSelection = (typeof start === 'number' && typeof end === 'number' && start !== end);
+
+    const items = [
+      {
+        id: 'input-cut',
+        icon: '✂️',
+        label: 'Αποκοπή',
+        shortcut: 'Ctrl+X',
+        disabled: !hasInputSelection || targetInput.readOnly,
+        action: async () => {
+          const sel = targetInput.value.substring(start, end);
+          if (sel) {
+            await writeToClipboard(sel);
+            targetInput.value = targetInput.value.substring(0, start) + targetInput.value.substring(end);
+            targetInput.setSelectionRange(start, start);
+            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            targetInput.focus();
+            showToast('Αποκοπή επιτυχής!');
+          }
+        }
+      },
+      {
+        id: 'input-copy',
+        icon: '📋',
+        label: 'Αντιγραφή',
+        shortcut: 'Ctrl+C',
+        disabled: !hasInputSelection,
+        action: async () => {
+          const sel = targetInput.value.substring(start, end);
+          if (sel) {
+            await writeToClipboard(sel);
+            targetInput.focus();
+            showToast('Αντιγράφηκε στο πρόχειρο!');
+          }
+        }
+      },
+      {
+        id: 'input-paste',
+        icon: '📥',
+        label: 'Επικόλληση',
+        shortcut: 'Ctrl+V',
+        disabled: targetInput.readOnly,
+        action: async () => {
+          const text = await readFromClipboard();
+          if (text) {
+            const s = targetInput.selectionStart || 0;
+            const en = targetInput.selectionEnd || 0;
+            const val = targetInput.value || '';
+            targetInput.value = val.substring(0, s) + text + val.substring(en);
+            targetInput.setSelectionRange(s + text.length, s + text.length);
+            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            targetInput.focus();
+          }
+        }
+      },
+      { type: 'separator' },
+      {
+        id: 'input-selectAll',
+        icon: '🔲',
+        label: 'Επιλογή Όλων',
+        shortcut: 'Ctrl+A',
+        action: () => {
+          targetInput.select();
+          targetInput.focus();
+        }
+      }
+    ];
+    openContextMenu(items, e.clientX, e.clientY);
+    return;
+  }
+
+  // 3. Έλεγχος αν υπάρχει επιλεγμένο κείμενο οπουδήποτε αλλού στη σελίδα (π.χ. οδηγός, modal)
+  const selectedText = window.getSelection() ? window.getSelection().toString() : '';
+  if (selectedText && selectedText.trim().length > 0) {
+    const items = [
+      {
+        id: 'text-copy',
+        icon: '📋',
+        label: 'Αντιγραφή',
+        shortcut: 'Ctrl+C',
+        action: async () => {
+          await writeToClipboard(selectedText);
+          showToast('Αντιγράφηκε στο πρόχειρο!');
+        }
+      },
+      {
+        id: 'text-selectAll',
+        icon: '🔲',
+        label: 'Επιλογή Όλων',
+        shortcut: 'Ctrl+A',
+        action: () => {
+          document.execCommand('selectAll');
+        }
+      }
+    ];
+    openContextMenu(items, e.clientX, e.clientY);
+    return;
+  }
+
+  // 4. Γενικό μενού εφαρμογής για κενές περιοχές
+  const items = [
+    {
+      id: 'refresh',
+      icon: '🔄',
+      label: 'Ανανέωση Προεπισκόπησης',
+      shortcut: 'F5',
+      action: () => updateLivePreview()
+    },
+    {
+      id: 'openBrowser',
+      icon: '🌐',
+      label: `Προβολή στον ${getBrowserName(appSettings.browser)}`,
+      shortcut: 'Ctrl+B',
+      action: () => openInExternalBrowser()
+    },
+    { type: 'separator' },
+    {
+      id: 'toggleGuide',
+      icon: '📚',
+      label: 'Εναλλαγή Οδηγού Εντολών',
+      shortcut: 'Ctrl+G',
+      action: () => toggleGuidePanel()
+    },
+    {
+      id: 'fullscreen',
+      icon: '⛶',
+      label: 'Πλήρης Οθόνη',
+      shortcut: 'F11',
+      action: () => {
+        if (window.electronAPI && window.electronAPI.toggleFullScreen) {
+          window.electronAPI.toggleFullScreen();
+        }
+      }
+    }
+  ];
+  openContextMenu(items, e.clientX, e.clientY);
+}
+
+// Εμφάνιση του αναδυόμενου μενού δεξιού κλικ
+function openContextMenu(items, x, y) {
+  const menu = document.getElementById('context-menu');
+  if (!menu) return;
+
+  menu.innerHTML = '';
+  items.forEach(item => {
+    if (item.type === 'separator') {
+      const sep = document.createElement('div');
+      sep.className = 'ctx-separator';
+      menu.appendChild(sep);
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'ctx-item' + (item.disabled ? ' disabled' : '');
+    el.innerHTML = `
+      <span class="ctx-icon">${item.icon || ''}</span>
+      <span class="ctx-label">${escapeHtml(item.label)}</span>
+      ${item.shortcut ? `<span class="ctx-shortcut">${escapeHtml(item.shortcut)}</span>` : ''}
+    `;
+    if (!item.disabled) {
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        closeContextMenu();
+        if (item.action) {
+          try { item.action(); } catch (err) { console.error('Menu action error:', err); }
+        }
+      });
+    }
+    menu.appendChild(el);
+  });
+
+  menu.style.display = 'block';
+  menu.classList.add('open');
+
+  // Υπολογισμός θέσης με αποτροπή υπερχείλισης από την οθόνη
+  const menuWidth = menu.offsetWidth || 230;
+  const menuHeight = menu.offsetHeight || 300;
+  const pad = 8;
+
+  let left = x;
+  let top = y;
+
+  if (left + menuWidth > window.innerWidth - pad) {
+    left = Math.max(pad, window.innerWidth - menuWidth - pad);
+  }
+  if (top + menuHeight > window.innerHeight - pad) {
+    top = Math.max(pad, window.innerHeight - menuHeight - pad);
+  }
+
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+}
+
+// Κλείσιμο του αναδυόμενου μενού δεξιού κλικ
+function closeContextMenu() {
+  const menu = document.getElementById('context-menu');
+  if (menu && menu.style.display !== 'none') {
+    menu.style.display = 'none';
+    menu.classList.remove('open');
+  }
+}
+
+// Βοηθητικές συναρτήσεις Προχείρου (Clipboard)
+async function writeToClipboard(text) {
+  try {
+    if (window.electronAPI && window.electronAPI.writeClipboard) {
+      await window.electronAPI.writeClipboard(text);
+      return true;
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Clipboard write error:', err);
+  }
+  return false;
+}
+
+async function readFromClipboard() {
+  try {
+    if (window.electronAPI && window.electronAPI.readClipboard) {
+      const res = await window.electronAPI.readClipboard();
+      if (typeof res === 'string') return res;
+    } else if (navigator.clipboard && navigator.clipboard.readText) {
+      return await navigator.clipboard.readText();
+    }
+  } catch (err) {
+    console.warn('Clipboard read error:', err);
+  }
+  return '';
 }

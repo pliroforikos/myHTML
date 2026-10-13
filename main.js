@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -360,6 +360,16 @@ ipcMain.handle('window:toggleFullScreen', () => {
   if (mainWindow) {
     mainWindow.setFullScreen(!mainWindow.isFullScreen());
   }
+});
+
+// Διαχείριση Προχείρου (Clipboard)
+ipcMain.handle('clipboard:readText', () => {
+  return clipboard.readText();
+});
+
+ipcMain.handle('clipboard:writeText', (event, text) => {
+  clipboard.writeText(text || '');
+  return true;
 });
 
 // Συγχρονισμός θέματος τίτλου Windows 11

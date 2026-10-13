@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
   selectFolder: (currentPath) => ipcRenderer.invoke('settings:selectFolder', currentPath),
 
+  // Clipboard
+  readClipboard: () => ipcRenderer.invoke('clipboard:readText'),
+  writeClipboard: (text) => ipcRenderer.invoke('clipboard:writeText', text),
+
   // Window controls
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
