@@ -15,7 +15,7 @@
   <!-- Application CSS -->
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-theme="dark">
+<body data-theme="dark" data-accent="blue">
 
   <!-- TOP TOOLBAR -->
   <header class="app-header">
@@ -27,6 +27,22 @@
       </div>
     </div>
 
+    <!-- Καρτέλες Μενού (Ribbon Tabs) -->
+    <nav class="ribbon-tabs" role="tablist" aria-label="Μενού εφαρμογής">
+      <button class="ribbon-tab active" data-ribbon="home" role="tab" aria-selected="true">
+        <span>🏠</span> Κεντρικό
+      </button>
+      <button class="ribbon-tab" data-ribbon="project" role="tab" aria-selected="false">
+        <span>🎒</span> Εργασία
+      </button>
+      <button class="ribbon-tab" data-ribbon="view" role="tab" aria-selected="false">
+        <span>🎨</span> Εμφάνιση
+      </button>
+      <button class="ribbon-tab" data-ribbon="help" role="tab" aria-selected="false">
+        <span>⚙️</span> Ρυθμίσεις &amp; Βοήθεια
+      </button>
+    </nav>
+
     <!-- Mode Selector: Αρχάριος (Ενιαίο) vs Προχωρημένος (Tabs) -->
     <div class="mode-selector">
       <button id="btn-mode-beginner" class="mode-btn active" title="Ενιαίο αρχείο HTML με εσωτερικό CSS">
@@ -36,56 +52,118 @@
         <span>🚀</span> Προχωρημένος (Tabs)
       </button>
     </div>
-
-    <!-- Main Toolbar Actions -->
-    <div class="toolbar-actions">
-      <button id="btn-new" class="btn" title="Νέο αρχείο (Ctrl+N)">
-        <span>📄</span> Νέο
-      </button>
-      <button id="btn-open" class="btn" title="Άνοιγμα αρχείου (Ctrl+O)">
-        <span>📂</span> Άνοιγμα
-      </button>
-      <button id="btn-save" class="btn" title="Αποθήκευση (Ctrl+S)">
-        <span>💾</span> Αποθήκευση
-      </button>
-      <button id="btn-export-zip" class="btn" title="Εξαγωγή σε ZIP για παράδοση εργασίας στον καθηγητή">
-        <span>📦</span> Εξαγωγή ZIP
-      </button>
-      <button id="btn-templates" class="btn" title="Έτοιμα Εκπαιδευτικά Πρότυπα">
-        <span>💡</span> Πρότυπα
-      </button>
-      <button id="btn-format" class="btn" title="Αυτόματη στοίχιση κώδικα (Shift+Alt+F)">
-        <span>✨</span> Μορφοποίηση
-      </button>
-      <button id="btn-open-edge" class="btn btn-primary" title="Προβολή στον επιλεγμένο Browser (Ctrl+B)">
-        <span id="open-browser-icon">🌐</span> <span id="open-browser-text">Προβολή στον Edge</span>
-      </button>
-      <button id="btn-eclass" class="btn" title="Σύνδεση με το eclass.sch.gr (Πανελλήνιο Σχολικό Δίκτυο)">
-        <span>🏫</span> e-Class
-      </button>
-      <button id="btn-toggle-guide" class="btn btn-icon-only" title="Εναλλαγή Οδηγού Εντολών (Ctrl+G)">
-        <span>📚</span>
-      </button>
-      <button id="btn-zoom-in" class="btn btn-icon-only" title="Μεγέθυνση κειμένου">
-        <span>A+</span>
-      </button>
-      <button id="btn-zoom-out" class="btn btn-icon-only" title="Σμίκρυνση κειμένου">
-        <span>A-</span>
-      </button>
-      <button id="btn-theme" class="btn btn-icon-only" title="Εναλλαγή Φωτεινού/Σκοτεινού θέματος">
-        <span>🌓</span>
-      </button>
-      <button id="btn-settings" class="btn btn-icon-only" title="Ρυθμίσεις (Browser, Φάκελος, Εμφάνιση)">
-        <span>⚙️</span>
-      </button>
-      <button id="btn-about" class="btn btn-icon-only" title="Σχετικά &amp; Όροι Χρήσης">
-        <span>ℹ️</span>
-      </button>
-      <button id="btn-win-fullscreen" class="btn btn-icon-only" title="Εναλλαγή Πλήρους Οθόνης (F11)">
-        <span>⛶</span>
-      </button>
-    </div>
   </header>
+
+  <!-- RIBBON: Περιεχόμενο της ενεργής καρτέλας, ομαδοποιημένο -->
+  <div class="ribbon">
+    <!-- 🏠 Κεντρικό: οι ενέργειες που χρειάζεται ο μαθητής συνεχώς -->
+    <div class="ribbon-panel active" data-ribbon="home" role="tabpanel">
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Αρχείο</span>
+        <button id="btn-new" class="btn" title="Νέο αρχείο (Ctrl+N)">
+          <span>📄</span> Νέο
+        </button>
+        <button id="btn-open" class="btn" title="Άνοιγμα αρχείου (Ctrl+O)">
+          <span>📂</span> Άνοιγμα
+        </button>
+        <button id="btn-save" class="btn" title="Αποθήκευση (Ctrl+S)">
+          <span>💾</span> Αποθήκευση
+        </button>
+      </div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Εκτέλεση</span>
+        <button id="btn-open-edge" class="btn btn-primary" title="Προβολή στον επιλεγμένο Browser (Ctrl+B)">
+          <span id="open-browser-icon">🌐</span> <span id="open-browser-text">Προβολή στον Edge</span>
+        </button>
+      </div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Κώδικας</span>
+        <button id="btn-toggle-guide" class="btn" title="Εναλλαγή Οδηγού Εντολών (Ctrl+G)">
+          <span>📚</span> Οδηγός Εντολών
+        </button>
+        <button id="btn-format" class="btn" title="Αυτόματη στοίχιση κώδικα (Shift+Alt+F)">
+          <span>✨</span> Μορφοποίηση
+        </button>
+      </div>
+    </div>
+
+    <!-- 🎒 Εργασία: ξεκίνημα από πρότυπο & παράδοση στον καθηγητή -->
+    <div class="ribbon-panel" data-ribbon="project" role="tabpanel">
+      <div class="ribbon-group" id="ribbon-group-templates">
+        <span class="ribbon-group-label">Ξεκίνημα</span>
+        <button id="btn-templates" class="btn" title="Έτοιμα Εκπαιδευτικά Πρότυπα">
+          <span>💡</span> Πρότυπα
+        </button>
+      </div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Παράδοση</span>
+        <button id="btn-export-zip" class="btn" title="Εξαγωγή σε ZIP για παράδοση εργασίας στον καθηγητή">
+          <span>📦</span> Εξαγωγή ZIP
+        </button>
+        <button id="btn-eclass" class="btn" title="Σύνδεση με το eclass.sch.gr (Πανελλήνιο Σχολικό Δίκτυο)">
+          <span>🏫</span> e-Class
+        </button>
+      </div>
+    </div>
+
+    <!-- 🎨 Εμφάνιση: γράμματα, θέμα, παράθυρο -->
+    <div class="ribbon-panel" data-ribbon="view" role="tabpanel">
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Γράμματα</span>
+        <button id="btn-zoom-out" class="btn" title="Σμίκρυνση κειμένου">
+          <span>A-</span> Μικρότερα
+        </button>
+        <button id="btn-zoom-in" class="btn" title="Μεγέθυνση κειμένου">
+          <span>A+</span> Μεγαλύτερα
+        </button>
+      </div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Θέμα</span>
+        <button id="btn-theme" class="btn" title="Εναλλαγή Φωτεινού/Σκοτεινού θέματος">
+          <span>🌓</span> Φωτεινό / Σκοτεινό
+        </button>
+      </div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Χρώμα</span>
+        <div class="accent-swatches">
+          <button class="accent-swatch" data-accent="blue" title="Μπλε"></button>
+          <button class="accent-swatch" data-accent="teal" title="Τιρκουάζ"></button>
+          <button class="accent-swatch" data-accent="green" title="Πράσινο"></button>
+          <button class="accent-swatch" data-accent="amber" title="Κεχριμπάρι"></button>
+          <button class="accent-swatch" data-accent="orange" title="Πορτοκαλί"></button>
+          <button class="accent-swatch" data-accent="red" title="Κόκκινο"></button>
+          <button class="accent-swatch" data-accent="pink" title="Ροζ"></button>
+          <button class="accent-swatch" data-accent="violet" title="Μωβ"></button>
+          <button class="accent-swatch" data-accent="graphite" title="Γραφίτης"></button>
+        </div>
+      </div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Παράθυρο</span>
+        <button id="btn-win-fullscreen" class="btn" title="Εναλλαγή Πλήρους Οθόνης (F11)">
+          <span>⛶</span> Πλήρης Οθόνη
+        </button>
+      </div>
+    </div>
+
+    <!-- ⚙️ Ρυθμίσεις & Βοήθεια -->
+    <div class="ribbon-panel" data-ribbon="help" role="tabpanel">
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Εφαρμογή</span>
+        <button id="btn-settings" class="btn" title="Ρυθμίσεις (Browser, Φάκελος, Εμφάνιση)">
+          <span>⚙️</span> Ρυθμίσεις
+        </button>
+      </div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Βοήθεια</span>
+        <button id="btn-shortcuts" class="btn" title="Λίστα συντομεύσεων πληκτρολογίου">
+          <span>⌨️</span> Συντομεύσεις
+        </button>
+        <button id="btn-about" class="btn" title="Σχετικά &amp; Όροι Χρήσης">
+          <span>ℹ️</span> Σχετικά
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- MAIN WORKSPACE -->
   <main class="workspace-container">
@@ -184,7 +262,7 @@
   <footer class="status-bar">
     <div class="status-left">
       <div class="status-item" id="status-version">
-        <span>🌐</span> EduHTML v1.3.2
+        <span>🌐</span> EduHTML v1.4.0
       </div>
       <div class="status-item" id="status-save">
         ✔ Αποθηκευμένο
@@ -234,7 +312,7 @@
         <!-- Επιλογή Browser -->
         <div class="settings-group">
           <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 5px; font-size: 13.5px;">
-            🌐 Επιλογή Εξωτερικού Browser:
+            Εξωτερικός browser
           </label>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
             Επιλέξτε το πρόγραμμα περιήγησης που θα εκτελείται στο κουμπί «Προβολή» και κατά τη σύνδεση στο e-Class.
@@ -251,21 +329,21 @@
         <!-- Επιλογή Φακέλου Αποθήκευσης -->
         <div class="settings-group">
           <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 5px; font-size: 13.5px;">
-            📁 Προεπιλεγμένος Φάκελος Αποθήκευσης:
+            Φάκελος αποθήκευσης
           </label>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
             Ο αρχικός φάκελος αποθήκευσης των μαθητικών αρχείων (αρχικά: <code>My Documents/mywebpages</code>).
           </p>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="setting-folder-input" readonly style="flex: 1; padding: 8px 10px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); font-size: 12px;">
-            <button id="btn-browse-folder" class="btn" style="white-space: nowrap;">📁 Αλλαγή...</button>
+            <button id="btn-browse-folder" class="btn" style="white-space: nowrap;">Αλλαγή…</button>
           </div>
         </div>
 
         <!-- Παραμετροποίηση Λειτουργίας Αρχάριος -->
         <div class="settings-group" style="padding-top: 12px; border-top: 1px solid var(--border);">
           <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 6px; font-size: 13.5px;">
-            🌱 Προσαρμογή Λειτουργίας «Αρχάριος»:
+            Λειτουργία «Αρχάριος»
           </label>
           <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-main); line-height: 1.4;">
             <input type="checkbox" id="setting-hide-beginner-controls" style="margin-top: 2px; width: 16px; height: 16px; cursor: pointer;">
@@ -278,7 +356,7 @@
 
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border);">
           <button id="btn-save-settings" class="btn btn-primary" style="padding: 8px 20px;">
-            💾 Αποθήκευση Ρυθμίσεων
+            Αποθήκευση
           </button>
         </div>
       </div>
@@ -302,7 +380,7 @@
             <img src="assets/my_avatar.jpg" alt="Λέων Προκόπης" class="about-avatar-img">
           </div>
           <div class="about-creator-details">
-            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.3.2</span></div>
+            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.4.0</span></div>
             <div class="about-creator-name">Λέων Προκόπης</div>
             <div class="about-creator-role">Καθηγητής Πληροφορικής ΠΕ86</div>
             <div class="about-creator-school">2ο ΓΕΛ Ναυπλίου</div>

@@ -250,7 +250,7 @@ ipcMain.handle('dialog:saveFile', async (event, { defaultPath, content, filters 
   const baseDir = (settings.saveDirectory && fs.existsSync(settings.saveDirectory))
     ? settings.saveDirectory
     : defaultWebpagesDir;
-  
+
   const fileName = defaultPath ? path.basename(defaultPath) : 'index.html';
   const targetDefault = path.join(baseDir, fileName);
 

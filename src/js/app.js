@@ -86,7 +86,8 @@ h2 {
 let appSettings = {
   saveDirectory: '',
   browser: 'msedge',
-  hideBeginnerControls: false
+  hideBeginnerControls: false,
+  accent: 'blue'
 };
 
 const BROWSER_NAMES = {
@@ -118,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
 async function initAppVersion() {
-  let appVersion = '1.3.2';
+  let appVersion = '1.4.0';
   if (window.electronAPI && window.electronAPI.getVersion) {
     try {
       const v = await window.electronAPI.getVersion();
@@ -951,7 +952,17 @@ async function initSettings() {
   }
   updateBrowserButton();
   applyModeVisibility();
+  applyAccent(appSettings.accent);
   populateSettingsUI();
+}
+
+// Χρώμα έμφασης (accent) της διεπαφής
+function applyAccent(name) {
+  const accent = name || 'blue';
+  document.body.setAttribute('data-accent', accent);
+  document.querySelectorAll('.accent-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.accent === accent);
+  });
 }
 
 function updateBrowserButton() {
@@ -963,13 +974,13 @@ function updateBrowserButton() {
 
 function applyModeVisibility() {
   const modeSelector = document.querySelector('.mode-selector');
-  const btnTemplates = document.getElementById('btn-templates');
+  const templatesGroup = document.getElementById('ribbon-group-templates');
   if (currentMode === 'beginner' && appSettings.hideBeginnerControls) {
     if (modeSelector) modeSelector.style.display = 'none';
-    if (btnTemplates) btnTemplates.style.display = 'none';
+    if (templatesGroup) templatesGroup.style.display = 'none';
   } else {
     if (modeSelector) modeSelector.style.display = 'flex';
-    if (btnTemplates) btnTemplates.style.display = 'inline-flex';
+    if (templatesGroup) templatesGroup.style.display = 'flex';
   }
 }
 
@@ -1064,6 +1075,32 @@ function setupEventListeners() {
       btnShowShortcuts.classList.toggle('active', !isVisible);
     };
   }
+
+  // Κουμπί «Συντομεύσεις» του ribbon: ανοίγει το «Σχετικά» με τις συντομεύσεις ήδη ανοιχτές
+  const btnShortcuts = document.getElementById('btn-shortcuts');
+  if (btnShortcuts && shortcutsSection) {
+    btnShortcuts.onclick = () => {
+      shortcutsSection.style.display = 'block';
+      if (btnShowShortcuts) btnShowShortcuts.classList.add('active');
+      openModal('about-modal');
+    };
+  }
+
+  // Επιλογή χρώματος έμφασης (αποθηκεύεται στις ρυθμίσεις)
+  document.querySelectorAll('.accent-swatch').forEach(swatch => {
+    swatch.onclick = () => {
+      appSettings.accent = swatch.dataset.accent;
+      applyAccent(appSettings.accent);
+      if (window.electronAPI && window.electronAPI.saveSettings) {
+        window.electronAPI.saveSettings({ accent: appSettings.accent });
+      }
+    };
+  });
+
+  // Ribbon tabs (Κεντρικό / Εργασία / Εμφάνιση / Ρυθμίσεις & Βοήθεια)
+  document.querySelectorAll('.ribbon-tab').forEach(tab => {
+    tab.onclick = () => setRibbonTab(tab.dataset.ribbon);
+  });
 
   // Settings modal buttons
   const btnBrowse = document.getElementById('btn-browse-folder');
@@ -1199,6 +1236,18 @@ function setupGutters() {
       }
     });
   }
+}
+
+// Εναλλαγή της ενεργής καρτέλας του ribbon
+function setRibbonTab(name) {
+  document.querySelectorAll('.ribbon-tab').forEach(t => {
+    const isActive = t.dataset.ribbon === name;
+    t.classList.toggle('active', isActive);
+    t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+  document.querySelectorAll('.ribbon-panel').forEach(p => {
+    p.classList.toggle('active', p.dataset.ribbon === name);
+  });
 }
 
 function setActiveDeviceBtn(btn) {
