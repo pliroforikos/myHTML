@@ -35,6 +35,28 @@
 | :--- | :--- | :--- |
 | 🚀 **Portable (Φορητή)** | **[`EduHTML Studio-Portable-1.4.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.4.0/EduHTML.Studio-Portable-1.4.0.exe)** | Αυτόνομο αρχείο `.exe` που εκτελείται άμεσα **χωρίς εγκατάσταση** και χωρίς δικαιώματα διαχειριστή. Ιδανικό για **USB Flash Drive** στα σχολικά εργαστήρια. |
 | 💿 **Setup (Εγκατάσταση)** | **[`EduHTML Studio-Setup-1.4.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.4.0/EduHTML.Studio-Setup-1.4.0.exe)** | Πλήρης εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης. |
+| 🏫 **MSI (Μαζική Εγκατάσταση)** | **[`EduHTML Studio-1.4.0.msi`](https://github.com/pliroforikos/myHTML/releases/download/v1.4.0/EduHTML.Studio-1.4.0.msi)** | Πακέτο Windows Installer για **όλους τους χρήστες** του υπολογιστή (Program Files). Εγκαθίσταται σιωπηλά, ιδανικό για μαζική διανομή στο εργαστήριο (GPO, Intune, PDQ Deploy, σενάριο εντολών). |
+
+📖 **Αναλυτικός Οδηγός Εγκατάστασης:** [`INSTALL.md`](INSTALL.md) (μεμονωμένοι υπολογιστές, μαζική εγκατάσταση, Group Policy, Intune, αναβάθμιση, απεγκατάσταση, αντιμετώπιση προβλημάτων).
+
+### 🏫 Μαζική Εγκατάσταση στο Εργαστήριο (MSI)
+
+Από γραμμή εντολών **ως διαχειριστής** σε κάθε υπολογιστή (ή μέσω εργαλείου απομακρυσμένης διανομής):
+
+```bat
+:: Σιωπηλή εγκατάσταση για όλους τους χρήστες
+msiexec /i "EduHTML Studio-1.4.0.msi" /qn /norestart
+
+:: Σιωπηλή εγκατάσταση με αρχείο καταγραφής (για διάγνωση προβλημάτων)
+msiexec /i "EduHTML Studio-1.4.0.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
+
+:: Σιωπηλή απεγκατάσταση
+msiexec /x "EduHTML Studio-1.4.0.msi" /qn /norestart
+```
+
+- **Group Policy (GPO):** Αντιγράψτε το `.msi` σε κοινόχρηστο φάκελο δικτύου και προσθέστε το στο *Computer Configuration → Policies → Software Settings → Software installation*.
+- **Αναβαθμίσεις:** Κάθε νέα έκδοση MSI αντικαθιστά αυτόματα την προηγούμενη (σταθερό UpgradeCode), χωρίς να χρειάζεται πρώτα απεγκατάσταση.
+- Οι ρυθμίσεις και οι φάκελοι εργασιών (`Έγγραφα\mywebpages`) παραμένουν ξεχωριστοί για κάθε μαθητικό λογαριασμό.
 
 > 💡 **Σημείωση:** Για άμεση εκτέλεση από τον πηγαίο κώδικα, αρκεί ένα διπλό κλικ στο αρχείο **[`start.bat`](start.bat)**.
 
@@ -130,13 +152,15 @@ npm start
 # Ή διπλό κλικ στο start.bat
 ```
 
-### Δημιουργία Εκτελέσιμων Windows (Setup Installer & Portable):
+### Δημιουργία Εκτελέσιμων Windows (Setup Installer, Portable & MSI):
 ```bash
-npm run dist
+npm run dist        # Setup, Portable και MSI
+npm run dist:msi    # Μόνο το MSI
 ```
 Η εντολή παράγει αυτόματα στον φάκελο `dist/`:
 - **`EduHTML Studio-Setup-1.4.0.exe`**: Κανονικός εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης.
 - **`EduHTML Studio-Portable-1.4.0.exe`**: Αυτόνομη φορητή έκδοση (Portable), ιδανική για χρήση από USB flash drive στα σχολικά εργαστήρια χωρίς ανάγκη εγκατάστασης ή δικαιωμάτων διαχειριστή.
+- **`EduHTML Studio-1.4.0.msi`**: Πακέτο Windows Installer για μαζική, σιωπηλή εγκατάσταση σε όλους τους χρήστες του υπολογιστή (το WiX Toolset κατεβαίνει αυτόματα από το electron-builder).
 
 ---
 

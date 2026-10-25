@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "dist:msi": "electron-builder --win msi"
   },
   "keywords": [
     "html",
@@ -39,6 +40,10 @@
         {
           "target": "portable",
           "arch": ["x64"]
+        },
+        {
+          "target": "msi",
+          "arch": ["x64"]
         }
       ]
     },
@@ -54,6 +59,15 @@
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"
+    },
+    "msi": {
+      "oneClick": true,
+      "perMachine": true,
+      "runAfterFinish": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EduHTML Studio",
+      "artifactName": "${productName}-${version}.${ext}"
     }
   }
 }
