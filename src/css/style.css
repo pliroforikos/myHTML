@@ -29,6 +29,94 @@
   --status-height: 26px;
 }
 
+[data-theme="dark"] {
+  --bg-app: #0b0f19;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-surface: #1e293b;
+  --bg-input: #0b1120;
+  --bg-code: #0f172a;
+  --bg-hover: rgba(255, 255, 255, 0.07);
+  --bg-active: rgba(255, 255, 255, 0.12);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --border: #334155;
+  --border-light: #475569;
+  --shadow-pop: 0 12px 32px -8px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+/* Σκοτεινό Ανθρακί (Ζεστές Αποχρώσεις του Γκρι) */
+[data-theme="dark-charcoal"] {
+  --bg-app: #181a1f;
+  --bg-primary: #21242b;
+  --bg-secondary: #282c34;
+  --bg-tertiary: #353b45;
+  --bg-surface: #282c34;
+  --bg-input: #1b1d23;
+  --bg-code: #1e2227;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --text-main: #f3f4f6;
+  --text-muted: #9aa1ad;
+  --text-dim: #6e7683;
+  --border: #383d47;
+  --border-light: #484f5c;
+  --shadow-pop: 0 12px 32px -8px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --success: #3fb67b;
+  --warning: #e0a43a;
+  --danger: #e5534b;
+}
+
+/* Σκοτεινό Γραφίτη (One Dark / Cool Gray) */
+[data-theme="dark-graphite"] {
+  --bg-app: #161618;
+  --bg-primary: #1b1b1e;
+  --bg-secondary: #1f1f23;
+  --bg-tertiary: #2a2a2f;
+  --bg-surface: #232327;
+  --bg-input: #131315;
+  --bg-code: #1e1f22;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --text-main: #ececee;
+  --text-muted: #a3a3ab;
+  --text-dim: #75757e;
+  --border: #2d2d33;
+  --border-light: #3c3c44;
+  --shadow-pop: 0 12px 32px -8px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --success: #3fb67b;
+  --warning: #e0a43a;
+  --danger: #e5534b;
+}
+
+/* Σκοτεινό Μολυβί (VS Code Classic Neutral Gray) */
+[data-theme="dark-steel"] {
+  --bg-app: #181818;
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #333333;
+  --bg-surface: #252526;
+  --bg-input: #141414;
+  --bg-code: #1e1e1e;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --text-main: #d4d4d4;
+  --text-muted: #969696;
+  --text-dim: #6e6e6e;
+  --border: #3c3c3c;
+  --border-light: #4c4c4c;
+  --shadow-pop: 0 12px 32px -8px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --success: #4ec9b0;
+  --warning: #ce9178;
+  --danger: #f48771;
+}
+
+/* Φωτεινό Λευκό (Προεπιλογή) */
 [data-theme="light"] {
   --bg-app: #f3f2ef;
   --bg-primary: #ffffff;
@@ -50,6 +138,50 @@
   --danger: #d03b33;
 }
 
+/* Φωτεινό Απαλό Γκρι (Soft Gray & White) */
+[data-theme="light-gray"] {
+  --bg-app: #ebedf0;
+  --bg-primary: #f6f8fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e1e4e8;
+  --bg-surface: #ffffff;
+  --bg-input: #ffffff;
+  --bg-code: #ffffff;
+  --bg-hover: rgba(31, 35, 40, 0.05);
+  --bg-active: rgba(31, 35, 40, 0.09);
+  --text-main: #1f2328;
+  --text-muted: #656d76;
+  --text-dim: #8c959f;
+  --border: #d0d7de;
+  --border-light: #bcc5cf;
+  --shadow-pop: 0 12px 32px -8px rgba(31, 35, 40, 0.18), 0 2px 6px rgba(31, 35, 40, 0.06);
+  --success: #1a7f37;
+  --warning: #9a6700;
+  --danger: #cf222e;
+}
+
+/* Φωτεινό Ζεστό Λευκό (Warm Sand & Off-White) */
+[data-theme="light-warm"] {
+  --bg-app: #f5f2eb;
+  --bg-primary: #faf8f5;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #ece7dc;
+  --bg-surface: #ffffff;
+  --bg-input: #ffffff;
+  --bg-code: #ffffff;
+  --bg-hover: rgba(40, 39, 36, 0.05);
+  --bg-active: rgba(40, 39, 36, 0.09);
+  --text-main: #2b2823;
+  --text-muted: #6d675e;
+  --text-dim: #948d82;
+  --border: #dfd9cb;
+  --border-light: #ccc4b2;
+  --shadow-pop: 0 12px 32px -8px rgba(45, 40, 30, 0.16), 0 2px 6px rgba(45, 40, 30, 0.06);
+  --success: #2d8a54;
+  --warning: #b07010;
+  --danger: #c73832;
+}
+
 /* Χρώματα έμφασης (εφαρμόζονται στο body και στα δείγματα χρώματος) */
 [data-accent="blue"]     { --accent: #3f7cf4; --on-accent: #ffffff; }
 [data-accent="teal"]     { --accent: #12a0a0; --on-accent: #ffffff; }
@@ -61,8 +193,8 @@
 [data-accent="violet"]   { --accent: #7e61e8; --on-accent: #ffffff; }
 [data-accent="graphite"] { --accent: #b9b9c2; --on-accent: #151517; }
 
-[data-theme="light"][data-accent="graphite"],
-[data-theme="light"] [data-accent="graphite"] {
+[data-theme^="light"][data-accent="graphite"],
+[data-theme^="light"] [data-accent="graphite"] {
   --accent: #3a3a41;
   --on-accent: #ffffff;
 }
@@ -75,7 +207,7 @@ body {
   --accent-text: color-mix(in oklab, var(--accent) 70%, white);
 }
 
-body[data-theme="light"] {
+body[data-theme^="light"] {
   --accent-text: color-mix(in oklab, var(--accent) 88%, black);
 }
 
@@ -288,7 +420,7 @@ input[type="text"]:focus {
   box-shadow: inset 0 0 0 1px var(--border-light);
 }
 
-[data-theme="light"] .mode-btn.active {
+[data-theme^="light"] .mode-btn.active {
   background-color: #ffffff;
   box-shadow: 0 1px 2px rgba(40, 36, 28, 0.12), inset 0 0 0 1px var(--border);
 }
@@ -866,13 +998,28 @@ input[type="text"]:focus {
   background-color: color-mix(in srgb, var(--accent) 28%, transparent) !important;
 }
 
-[data-theme="light"] .CodeMirror {
+[data-theme^="light"] .CodeMirror {
   background-color: var(--bg-primary) !important;
   color: var(--text-main) !important;
 }
 
-[data-theme="light"] .CodeMirror-gutters {
+[data-theme^="light"] .CodeMirror-gutters {
   background-color: var(--bg-primary) !important;
+}
+
+/* Dark Themes CodeMirror backgrounds - overrides pitch black with theme's rich gray tones */
+[data-theme^="dark"] .CodeMirror {
+  background-color: var(--bg-input) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme^="dark"] .CodeMirror-gutters {
+  background-color: var(--bg-secondary) !important;
+  border-right: 1px solid var(--border) !important;
+}
+
+[data-theme^="dark"] .CodeMirror-linenumber {
+  color: var(--text-dim) !important;
 }
 
 /* AUTOCOMPLETE POPUP */
@@ -1054,7 +1201,7 @@ li.CodeMirror-hint-active::before {
   overflow: auto;
 }
 
-[data-theme="light"] .preview-container {
+[data-theme^="light"] .preview-container {
   background-color: var(--bg-tertiary);
 }
 
@@ -1181,7 +1328,7 @@ li.CodeMirror-hint-active::before {
   transition: opacity 0.18s ease;
 }
 
-[data-theme="light"] .modal-overlay {
+[data-theme^="light"] .modal-overlay {
   background-color: rgba(40, 36, 28, 0.25);
 }
 
@@ -1341,7 +1488,7 @@ li.CodeMirror-hint-active::before {
   transition: opacity 0.3s ease;
 }
 
-[data-theme="light"] .splash-overlay {
+[data-theme^="light"] .splash-overlay {
   background-color: rgba(243, 242, 239, 0.6);
 }
 
@@ -1365,7 +1512,7 @@ li.CodeMirror-hint-active::before {
   overflow: hidden;
 }
 
-[data-theme="light"] .splash-card {
+[data-theme^="light"] .splash-card {
   box-shadow: 0 30px 80px -20px rgba(40, 36, 28, 0.3);
 }
 
@@ -1837,4 +1984,37 @@ li.CodeMirror-hint-active::before {
   height: 1px;
   background-color: var(--border);
   margin: 4px 6px;
+}
+
+/* Update Notification Badge in Status Bar */
+.update-badge {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  border-radius: 12px;
+  padding: 2px 10px !important;
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+  font-size: 11.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  animation: pulse-badge 2.5s infinite;
+}
+
+[data-theme^="light"] .update-badge {
+  background: rgba(37, 99, 235, 0.12) !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+  color: #2563eb !important;
+}
+
+.update-badge:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
 }

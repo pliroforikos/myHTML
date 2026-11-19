@@ -29,13 +29,13 @@
 
 ## 📥 Έτοιμες Εκδόσεις για Λήψη (Windows 11)
 
-Τα έτοιμα εκτελέσιμα αρχεία της έκδοσης **v1.4.0** είναι διαθέσιμα στις [Κυκλοφορίες (GitHub Releases)](https://github.com/pliroforikos/myHTML/releases):
+Τα έτοιμα εκτελέσιμα αρχεία της έκδοσης **v1.5.0** είναι διαθέσιμα στις [Κυκλοφορίες (GitHub Releases)](https://github.com/pliroforikos/myHTML/releases):
 
 | Έκδοση | Αρχείο | Χαρακτηριστικά & Χρήση |
 | :--- | :--- | :--- |
-| 🚀 **Portable (Φορητή)** | **[`EduHTML Studio-Portable-1.4.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.4.0/EduHTML.Studio-Portable-1.4.0.exe)** | Αυτόνομο αρχείο `.exe` που εκτελείται άμεσα **χωρίς εγκατάσταση** και χωρίς δικαιώματα διαχειριστή. Ιδανικό για **USB Flash Drive** στα σχολικά εργαστήρια. |
-| 💿 **Setup (Εγκατάσταση)** | **[`EduHTML Studio-Setup-1.4.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.4.0/EduHTML.Studio-Setup-1.4.0.exe)** | Πλήρης εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης. |
-| 🏫 **MSI (Μαζική Εγκατάσταση)** | **[`EduHTML Studio-1.4.0.msi`](https://github.com/pliroforikos/myHTML/releases/download/v1.4.0/EduHTML.Studio-1.4.0.msi)** | Πακέτο Windows Installer για **όλους τους χρήστες** του υπολογιστή (Program Files). Εγκαθίσταται σιωπηλά, ιδανικό για μαζική διανομή στο εργαστήριο (GPO, Intune, PDQ Deploy, σενάριο εντολών). |
+| 🚀 **Portable (Φορητή)** | **[`EduHTML Studio-Portable-1.5.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.0/EduHTML.Studio-Portable-1.5.0.exe)** | Αυτόνομο αρχείο `.exe` που εκτελείται άμεσα **χωρίς εγκατάσταση** και χωρίς δικαιώματα διαχειριστή. Ιδανικό για **USB Flash Drive** στα σχολικά εργαστήρια. |
+| 💿 **Setup (Εγκατάσταση)** | **[`EduHTML Studio-Setup-1.5.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.0/EduHTML.Studio-Setup-1.5.0.exe)** | Πλήρης εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης. |
+| 🏫 **MSI (Μαζική Εγκατάσταση)** | **[`EduHTML Studio-1.5.0.msi`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.0/EduHTML.Studio-1.5.0.msi)** | Πακέτο Windows Installer για **όλους τους χρήστες** του υπολογιστή (Program Files). Εγκαθίσταται σιωπηλά, ιδανικό για μαζική διανομή στο εργαστήριο (GPO, Intune, PDQ Deploy, σενάριο εντολών). |
 
 📖 **Αναλυτικός Οδηγός Εγκατάστασης:** [`INSTALL.md`](INSTALL.md) (μεμονωμένοι υπολογιστές, μαζική εγκατάσταση, Group Policy, Intune, αναβάθμιση, απεγκατάσταση, αντιμετώπιση προβλημάτων).
 
@@ -45,13 +45,13 @@
 
 ```bat
 :: Σιωπηλή εγκατάσταση για όλους τους χρήστες
-msiexec /i "EduHTML Studio-1.4.0.msi" /qn /norestart
+msiexec /i "EduHTML Studio-1.5.0.msi" /qn /norestart
 
 :: Σιωπηλή εγκατάσταση με αρχείο καταγραφής (για διάγνωση προβλημάτων)
-msiexec /i "EduHTML Studio-1.4.0.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
+msiexec /i "EduHTML Studio-1.5.0.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
 
 :: Σιωπηλή απεγκατάσταση
-msiexec /x "EduHTML Studio-1.4.0.msi" /qn /norestart
+msiexec /x "EduHTML Studio-1.5.0.msi" /qn /norestart
 ```
 
 - **Group Policy (GPO):** Αντιγράψτε το `.msi` σε κοινόχρηστο φάκελο δικτύου και προσθέστε το στο *Computer Configuration → Policies → Software Settings → Software installation*.
@@ -158,13 +158,22 @@ npm run dist        # Setup, Portable και MSI
 npm run dist:msi    # Μόνο το MSI
 ```
 Η εντολή παράγει αυτόματα στον φάκελο `dist/`:
-- **`EduHTML Studio-Setup-1.4.0.exe`**: Κανονικός εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης.
-- **`EduHTML Studio-Portable-1.4.0.exe`**: Αυτόνομη φορητή έκδοση (Portable), ιδανική για χρήση από USB flash drive στα σχολικά εργαστήρια χωρίς ανάγκη εγκατάστασης ή δικαιωμάτων διαχειριστή.
-- **`EduHTML Studio-1.4.0.msi`**: Πακέτο Windows Installer για μαζική, σιωπηλή εγκατάσταση σε όλους τους χρήστες του υπολογιστή (το WiX Toolset κατεβαίνει αυτόματα από το electron-builder).
+- **`EduHTML Studio-Setup-1.5.0.exe`**: Κανονικός εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης.
+- **`EduHTML Studio-Portable-1.5.0.exe`**: Αυτόνομη φορητή έκδοση (Portable), ιδανική για χρήση από USB flash drive στα σχολικά εργαστήρια χωρίς ανάγκη εγκατάστασης ή δικαιωμάτων διαχειριστή.
+- **`EduHTML Studio-1.5.0.msi`**: Πακέτο Windows Installer για μαζική, σιωπηλή εγκατάσταση σε όλους τους χρήστες του υπολογιστή (το WiX Toolset κατεβαίνει αυτόματα από το electron-builder).
 
 ---
 
 ## 📝 Ιστορικό Εκδόσεων (Changelog)
+
+### 🚀 v1.5.0 (Διόρθωση Τοπικών Εικόνων, Νέα Θέματα Dark/Light & Αυτόματος Έλεγχος Ενημερώσεων)
+- 📸 **Άμεση Προεπισκόπηση Τοπικών Εικόνων**: Αυτόματος εντοπισμός σχετικών διαδρομών εικόνων (`<img src="eikona.jpg">`) στον ίδιο φάκελο με το αποθηκευμένο αρχείο HTML, χωρίς σφάλματα φόρτωσης.
+- 🎨 **7 Πλούσια Θέματα Εμφάνισης (Themes)**:
+  - **Σκοτεινά (Dark)**: Σκοτεινό Ανθρακί (Ζεστές αποχρώσεις του γκρι), Σκοτεινό Γραφίτη (Cool gray / One Dark), Σκοτεινό Μολυβί (VS Code gray), Σκοτεινό Slate.
+  - **Φωτεινά (Light)**: Φωτεινό Λευκό, Φωτεινό Απαλό Γκρι (Soft gray & white), Φωτεινό Ζεστό Χαρτί (Warm sand).
+  - Επιλογή απευθείας από τις Ρυθμίσεις (`F2`) με άμεση ζωντανή προεπισκόπηση και αποθήκευση.
+- 🔔 **Ενσωματωμένος Έλεγχος Ενημερώσεων (In-App Updater)**: Αυτόματος και χειροκίνητος έλεγχος για νέες εκδόσεις στο GitHub με αναλυτικό παράθυρο αλλαγών, απευθείας λήψη και διακριτική ειδοποίηση (badge) στη γραμμή κατάστασης.
+- 💾 **Απευθείας Αποθήκευση**: Όταν ένα αρχείο έχει ήδη αποθηκευτεί ή ανοιχτεί, το `Ctrl+S` αποθηκεύει άμεσα χωρίς περιττούς διαλόγους επιλογής διαδρομής.
 
 ### 🎨 v1.4.0 (Νέο Μενού με Καρτέλες & Ανανεωμένη Εμφάνιση)
 - 🗂️ **Μενού με Καρτέλες (Ribbon) στυλ Office:** Οι εντολές οργανώθηκαν σε τέσσερις καρτέλες (Κεντρικό, Εργασία, Εμφάνιση, Ρυθμίσεις & Βοήθεια) με ομάδες εντολών και το όνομα κάθε ομάδας από κάτω. Τα πιο συχνά χρησιμοποιούμενα (Νέο, Άνοιγμα, Αποθήκευση, Προβολή, Οδηγός, Μορφοποίηση) βρίσκονται στο «Κεντρικό».
