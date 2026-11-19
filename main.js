@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme } = requir
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const https = require('https');
 
 // Συγχρονισμός θέματος με τα Windows 11
 nativeTheme.themeSource = 'dark';
@@ -9,6 +10,10 @@ nativeTheme.themeSource = 'dark';
 let mainWindow;
 
 function createWindow() {
+  const settings = loadSettings();
+  const isLight = settings.theme && settings.theme.startsWith('light');
+  nativeTheme.themeSource = isLight ? 'light' : 'dark';
+
   const iconPath = path.join(__dirname, 'src', 'assets', 'icon.png');
   const windowConfig = {
     width: 1366,
@@ -16,13 +21,14 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     title: 'EduHTML Studio - Εκπαιδευτικός HTML & CSS Editor (Windows 11)',
-    backgroundColor: '#0f172a',
+    backgroundColor: isLight ? '#f8fafc' : '#0f172a',
     autoHideMenuBar: true, // Απόκρυψη της γκρι γραμμής μενού των Windows για καθαρή εμφάνιση
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      webSecurity: false, // Επιτρέπει φόρτωση τοπικών εικόνων και πόρων (file://) στην προεπισκόπηση
       webviewTag: true
     }
   };
@@ -133,13 +139,18 @@ function setupMenu() {
       label: 'Βοήθεια',
       submenu: [
         {
+          label: 'Έλεγχος για Ενημερώσεις...',
+          click: () => mainWindow && mainWindow.webContents.send('menu:checkUpdates')
+        },
+        { type: 'separator' },
+        {
           label: 'Σχετικά με το EduHTML Studio',
-          click: () => mainWindow.webContents.send('menu:about')
+          click: () => mainWindow && mainWindow.webContents.send('menu:about')
         },
         {
           label: 'Εργαλεία Προγραμματιστή (DevTools)',
           accelerator: 'F12',
-          click: () => mainWindow.webContents.toggleDevTools()
+          click: () => mainWindow && mainWindow.webContents.toggleDevTools()
         }
       ]
     }
@@ -167,7 +178,8 @@ function loadSettings() {
   const defaults = {
     saveDirectory: defaultWebpagesDir,
     browser: 'msedge', // 'msedge' | 'chrome' | 'firefox' | 'brave' | 'default'
-    hideBeginnerControls: false
+    hideBeginnerControls: false,
+    theme: 'dark' // 'dark' | 'dark-charcoal' | 'dark-graphite' | 'dark-steel' | 'light' | 'light-gray' | 'light-warm'
   };
   try {
     const sPath = getSettingsPath();
@@ -217,8 +229,21 @@ ipcMain.handle('dialog:openFile', async (event, filters) => {
   return null;
 });
 
-ipcMain.handle('app:getVersion', () => {
+function getApplicationVersion() {
+  try {
+    const pkgPath = path.join(__dirname, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      if (pkg.version) return pkg.version;
+    }
+  } catch (e) {
+    console.warn('Could not read package.json version:', e.message);
+  }
   return app.getVersion();
+}
+
+ipcMain.handle('app:getVersion', () => {
+  return getApplicationVersion();
 });
 
 ipcMain.handle('settings:get', () => {
@@ -251,8 +276,13 @@ ipcMain.handle('dialog:saveFile', async (event, { defaultPath, content, filters 
     ? settings.saveDirectory
     : defaultWebpagesDir;
   
-  const fileName = defaultPath ? path.basename(defaultPath) : 'index.html';
-  const targetDefault = path.join(baseDir, fileName);
+  let targetDefault;
+  if (defaultPath && path.isAbsolute(defaultPath)) {
+    targetDefault = defaultPath;
+  } else {
+    const fileName = defaultPath ? path.basename(defaultPath) : 'index.html';
+    targetDefault = path.join(baseDir, fileName);
+  }
 
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: targetDefault,
@@ -280,11 +310,36 @@ ipcMain.handle('app:openInExternalBrowser', async (event, payload) => {
 
     if (payload && payload.isUrl && payload.url) {
       target = payload.url;
+    } else if (payload && payload.filePath && fs.existsSync(payload.filePath)) {
+      // Αν το αρχείο έχει ήδη αποθηκευτεί, συγχρονίζουμε το τελευταίο περιεχόμενο και ανοίγουμε το πραγματικό αρχείο
+      if (payload.content) {
+        try {
+          fs.writeFileSync(payload.filePath, payload.content, 'utf-8');
+        } catch (e) {
+          console.error('Σφάλμα συγχρονισμού αρχείου πριν το άνοιγμα στον browser:', e);
+        }
+      }
+      target = payload.filePath;
     } else {
+      // Αν δεν έχει αποθηκευτεί ακόμα με όνομα, το αποθηκεύουμε προσωρινά στον φάκελο εργασίας του χρήστη
+      // ώστε ο browser να μπορεί να βρει τις εικόνες του
+      const baseDir = (payload && payload.workingDir && fs.existsSync(payload.workingDir))
+        ? payload.workingDir
+        : ((settings.saveDirectory && fs.existsSync(settings.saveDirectory)) ? settings.saveDirectory : defaultWebpagesDir);
+
       const htmlContent = (typeof payload === 'string') ? payload : (payload && payload.content ? payload.content : '');
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eduhtml-'));
-      const tempFile = path.join(tempDir, 'preview.html');
-      fs.writeFileSync(tempFile, htmlContent, 'utf-8');
+      let tempFile;
+      try {
+        if (!fs.existsSync(baseDir)) {
+          fs.mkdirSync(baseDir, { recursive: true });
+        }
+        tempFile = path.join(baseDir, '_preview_temp.html');
+        fs.writeFileSync(tempFile, htmlContent, 'utf-8');
+      } catch (err) {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eduhtml-'));
+        tempFile = path.join(tempDir, 'preview.html');
+        fs.writeFileSync(tempFile, htmlContent, 'utf-8');
+      }
       target = tempFile;
     }
 
@@ -364,7 +419,122 @@ ipcMain.handle('window:toggleFullScreen', () => {
 
 // Συγχρονισμός θέματος τίτλου Windows 11
 ipcMain.handle('theme:set', (event, theme) => {
-  nativeTheme.themeSource = theme;
+  nativeTheme.themeSource = (theme && theme.startsWith('light')) ? 'light' : 'dark';
+});
+
+// Βοηθητικές συναρτήσεις ελέγχου ενημερώσεων
+function parseSemver(ver) {
+  if (!ver) return [0, 0, 0];
+  const clean = ver.replace(/^v/i, '').trim();
+  const parts = clean.split('.').map(n => parseInt(n, 10) || 0);
+  while (parts.length < 3) parts.push(0);
+  return parts;
+}
+
+function isNewerVersion(currentVer, remoteVer) {
+  const c = parseSemver(currentVer);
+  const r = parseSemver(remoteVer);
+  for (let i = 0; i < 3; i++) {
+    if (r[i] > c[i]) return true;
+    if (r[i] < c[i]) return false;
+  }
+  return false;
+}
+
+function fetchJsonHttps(url) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const req = https.get({
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      headers: {
+        'User-Agent': 'EduHTML-Studio-Updater',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      timeout: 8000
+    }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return fetchJsonHttps(res.headers.location).then(resolve).catch(reject);
+      }
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      let body = '';
+      res.on('data', chunk => { body += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(body);
+          resolve(json);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Timeout'));
+    });
+  });
+}
+
+// Έλεγχος για νέα έκδοση στο αποθετήριο GitHub
+ipcMain.handle('app:checkForUpdates', async () => {
+  const currentVersion = getApplicationVersion();
+  try {
+    // 1. Δοκιμή ανάκτησης του τελευταίου release από το GitHub API
+    let release = null;
+    try {
+      release = await fetchJsonHttps('https://api.github.com/repos/pliroforikos/myHTML/releases/latest');
+    } catch (err) {
+      console.warn('GitHub Releases API lookup error:', err.message);
+    }
+
+    if (release && release.tag_name) {
+      const remoteVersion = release.tag_name;
+      const hasUpdate = isNewerVersion(currentVersion, remoteVersion);
+      return {
+        success: true,
+        hasUpdate: hasUpdate,
+        currentVersion: currentVersion,
+        latestVersion: remoteVersion,
+        releaseName: release.name || remoteVersion,
+        releaseNotes: release.body || '',
+        publishedAt: release.published_at || '',
+        downloadUrl: release.html_url || 'https://github.com/pliroforikos/myHTML/releases'
+      };
+    }
+
+    // 2. Εναλλακτική ανάκτηση μέσω raw package.json στο main branch
+    const remotePkg = await fetchJsonHttps('https://raw.githubusercontent.com/pliroforikos/myHTML/main/package.json');
+    if (remotePkg && remotePkg.version) {
+      const remoteVersion = remotePkg.version;
+      const hasUpdate = isNewerVersion(currentVersion, remoteVersion);
+      return {
+        success: true,
+        hasUpdate: hasUpdate,
+        currentVersion: currentVersion,
+        latestVersion: `v${remoteVersion}`,
+        releaseName: `EduHTML Studio v${remoteVersion}`,
+        releaseNotes: 'Νέα έκδοση διαθέσιμη στο αποθετήριο GitHub.',
+        publishedAt: '',
+        downloadUrl: 'https://github.com/pliroforikos/myHTML/releases'
+      };
+    }
+
+    return {
+      success: true,
+      hasUpdate: false,
+      currentVersion: currentVersion,
+      latestVersion: `v${currentVersion}`
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.message,
+      currentVersion: currentVersion
+    };
+  }
 });
 
 app.whenReady().then(() => {

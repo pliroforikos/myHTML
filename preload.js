@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileDirect: (data) => ipcRenderer.invoke('app:saveFileDirect', data),
   openInExternalBrowser: (data) => ipcRenderer.invoke('app:openInExternalBrowser', data),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
   
   // Settings & Folder Management
   getSettings: () => ipcRenderer.invoke('settings:get'),
@@ -29,5 +30,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMenuToggleGuide: (callback) => ipcRenderer.on('menu:toggleGuide', callback),
   onMenuToggleMode: (callback) => ipcRenderer.on('menu:toggleMode', callback),
   onMenuFormatCode: (callback) => ipcRenderer.on('menu:formatCode', callback),
-  onMenuAbout: (callback) => ipcRenderer.on('menu:about', callback)
+  onMenuAbout: (callback) => ipcRenderer.on('menu:about', callback),
+  onMenuCheckUpdates: (callback) => ipcRenderer.on('menu:checkUpdates', callback)
 });

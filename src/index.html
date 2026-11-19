@@ -174,7 +174,7 @@
       </div>
 
       <div class="preview-container">
-        <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-forms allow-popups"></iframe>
+        <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-modals"></iframe>
       </div>
     </section>
 
@@ -188,6 +188,9 @@
       </div>
       <div class="status-item" id="status-save">
         ✔ Αποθηκευμένο
+      </div>
+      <div class="status-item update-badge" id="status-update-badge" style="display: none;" title="Κάντε κλικ για προβολή της νέας έκδοσης">
+        ✨ Νέα έκδοση διαθέσιμη!
       </div>
     </div>
     <div class="status-right">
@@ -231,6 +234,29 @@
         <button class="modal-close">✕</button>
       </div>
       <div class="modal-body" style="gap: 18px;">
+        <!-- Επιλογή Θέματος Εμφάνισης -->
+        <div class="settings-group">
+          <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 5px; font-size: 13.5px;">
+            🎨 Θέμα Εμφάνισης (UI Theme):
+          </label>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+            Επιλέξτε ανάμεσα σε κομψές αποχρώσεις σκοτεινού (Dark - Γκρι/Slate) ή φωτεινού (Light - Λευκό/Γκρι) θέματος.
+          </p>
+          <select id="setting-theme-select" style="width: 100%; padding: 8px 10px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); font-size: 13px;">
+            <optgroup label="🌙 Σκοτεινά Θέματα (Dark - Αποχρώσεις του Γκρι &amp; Slate)">
+              <option value="dark-charcoal">Σκοτεινό Ανθρακί (Ζεστές Αποχρώσεις του Γκρι - Προτείνεται)</option>
+              <option value="dark-graphite">Σκοτεινό Γραφίτη (One Dark / Cool Gray)</option>
+              <option value="dark-steel">Σκοτεινό Μολυβί (VS Code Classic Neutral Gray)</option>
+              <option value="dark">Σκοτεινό Slate (Αρχική Προεπιλογή Μπλε-Μαύρο)</option>
+            </optgroup>
+            <optgroup label="☀️ Φωτεινά Θέματα (Light - Λευκά &amp; Ανοιχτά Γκρι)">
+              <option value="light-gray">Φωτεινό Απαλό Γκρι (Soft Gray &amp; Pure White - Ξεκούραστο)</option>
+              <option value="light-warm">Φωτεινό Ζεστό Λευκό (Warm White / Sand)</option>
+              <option value="light">Φωτεινό Λευκό (Αρχική Προεπιλογή)</option>
+            </optgroup>
+          </select>
+        </div>
+
         <!-- Επιλογή Browser -->
         <div class="settings-group">
           <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 5px; font-size: 13.5px;">
@@ -276,9 +302,64 @@
           </p>
         </div>
 
+        <!-- Έλεγχος Ενημερώσεων Εφαρμογής -->
+        <div class="settings-group" style="padding-top: 12px; border-top: 1px solid var(--border);">
+          <label style="font-weight: 700; color: var(--text-main); display: block; margin-bottom: 5px; font-size: 13.5px;">
+            🚀 Ενημερώσεις Εφαρμογής:
+          </label>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <div style="font-size: 12px; color: var(--text-muted);">
+              Έλεγχος αν υπάρχει νεότερη έκδοση του EduHTML Studio στο GitHub.
+            </div>
+            <button id="btn-check-updates-settings" class="btn" style="white-space: nowrap;">
+              <span>🔄</span> Έλεγχος τώρα
+            </button>
+          </div>
+        </div>
+
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border);">
           <button id="btn-save-settings" class="btn btn-primary" style="padding: 8px 20px;">
             💾 Αποθήκευση Ρυθμίσεων
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPDATE MODAL -->
+  <div id="update-modal" class="modal-overlay">
+    <div class="modal-window" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🚀</span> Ενημέρωση Λογισμικού EduHTML Studio
+        </div>
+        <button class="modal-close">✕</button>
+      </div>
+      <div class="modal-body" style="gap: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px;">
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">Εγκατεστημένη Έκδοση</div>
+            <div id="update-current-version" style="font-size: 15px; font-weight: 700; color: var(--text-main);">v1.3.1</div>
+          </div>
+          <div style="font-size: 20px; color: var(--text-muted);">➜</div>
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #10b981; font-weight: 700; letter-spacing: 0.5px;">Νέα Έκδοση</div>
+            <div id="update-latest-version" style="font-size: 16px; font-weight: 800; color: #10b981;">v1.4.0</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-weight: 700; color: var(--text-main); font-size: 13.5px; margin-bottom: 6px;">
+            📋 Τι νέο υπάρχει σε αυτή την έκδοση:
+          </div>
+          <div id="update-release-notes" style="max-height: 220px; overflow-y: auto; padding: 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; font-size: 12.5px; line-height: 1.6; color: var(--text-main); white-space: pre-wrap; font-family: var(--font-ui);">
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border);">
+          <button class="btn modal-close">Αργότερα</button>
+          <button id="btn-download-update" class="btn btn-primary" style="padding: 8px 18px;">
+            <span>📥</span> Λήψη Νέας Έκδοσης (GitHub)
           </button>
         </div>
       </div>
@@ -330,13 +411,16 @@
           </div>
         </div>
 
-        <!-- Buttons row: Terms & Shortcuts -->
+        <!-- Buttons row: Terms & Shortcuts & Updates -->
         <div class="about-actions-row">
           <button id="btn-show-terms" class="btn btn-outline-accent">
             <span>📜</span> Όροι Χρήσης &amp; Άδεια
           </button>
           <button id="btn-show-shortcuts" class="btn btn-outline-secondary">
-            <span>⌨️</span> Συντομεύσεις Πληκτρολογίου
+            <span>⌨️</span> Συντομεύσεις
+          </button>
+          <button id="btn-check-updates-about" class="btn btn-outline-secondary">
+            <span>🔄</span> Έλεγχος Ενημερώσεων
           </button>
         </div>
 

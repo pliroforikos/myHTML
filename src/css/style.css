@@ -1,4 +1,4 @@
-:root {
+:root, [data-theme="dark"] {
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
   --bg-tertiary: #334155;
@@ -21,12 +21,64 @@
   --status-height: 28px;
 }
 
+/* Σκοτεινό Ανθρακί (Ζεστές Αποχρώσεις του Γκρι) */
+[data-theme="dark-charcoal"] {
+  --bg-primary: #22252a;
+  --bg-secondary: #2b2f36;
+  --bg-tertiary: #383d47;
+  --bg-surface: #2b2f36;
+  --bg-input: #1a1c20;
+  --border: #3d434e;
+  --border-light: #4c5361;
+  --text-main: #f3f4f6;
+  --text-muted: #9aa1ad;
+  --text-dim: #6e7683;
+  --accent: #38bdf8;
+  --accent-hover: #0284c7;
+  --accent-light: rgba(56, 189, 248, 0.15);
+}
+
+/* Σκοτεινό Γραφίτη (One Dark Cool Gray) */
+[data-theme="dark-graphite"] {
+  --bg-primary: #1f2329;
+  --bg-secondary: #282c34;
+  --bg-tertiary: #353b45;
+  --bg-surface: #282c34;
+  --bg-input: #17191e;
+  --border: #3e4451;
+  --border-light: #4e5563;
+  --text-main: #e5e6ea;
+  --text-muted: #abb2bf;
+  --text-dim: #7f848e;
+  --accent: #61afef;
+  --accent-hover: #4d8ec4;
+  --accent-light: rgba(97, 175, 239, 0.15);
+}
+
+/* Σκοτεινό Μολυβί (VS Code Classic Neutral Gray) */
+[data-theme="dark-steel"] {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #333333;
+  --bg-surface: #252526;
+  --bg-input: #161616;
+  --border: #3c3c3c;
+  --border-light: #4c4c4c;
+  --text-main: #d4d4d4;
+  --text-muted: #969696;
+  --text-dim: #6e6e6e;
+  --accent: #007acc;
+  --accent-hover: #0062a3;
+  --accent-light: rgba(0, 122, 204, 0.15);
+}
+
+/* Φωτεινό Λευκό (Προεπιλογή) */
 [data-theme="light"] {
   --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
   --bg-tertiary: #f1f5f9;
   --bg-surface: #ffffff;
-  --bg-input: #f8fafc;
+  --bg-input: #ffffff;
   --text-main: #0f172a;
   --text-muted: #475569;
   --text-dim: #94a3b8;
@@ -35,6 +87,40 @@
   --accent-light: rgba(37, 99, 235, 0.1);
   --border: #e2e8f0;
   --border-light: #cbd5e1;
+}
+
+/* Φωτεινό Απαλό Γκρι (Soft Gray & White) */
+[data-theme="light-gray"] {
+  --bg-primary: #eeeeef;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e2e4e8;
+  --bg-surface: #ffffff;
+  --bg-input: #ffffff;
+  --text-main: #1f2328;
+  --text-muted: #656d76;
+  --text-dim: #8c959f;
+  --accent: #0969da;
+  --accent-hover: #0550ae;
+  --accent-light: rgba(9, 105, 218, 0.1);
+  --border: #cfd3da;
+  --border-light: #bdc3cd;
+}
+
+/* Φωτεινό Ζεστό Λευκό (Warm Sand & Off-White) */
+[data-theme="light-warm"] {
+  --bg-primary: #f6f5f1;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #ebe9e3;
+  --bg-surface: #ffffff;
+  --bg-input: #fbfbf9;
+  --text-main: #282724;
+  --text-muted: #726f68;
+  --text-dim: #99968d;
+  --accent: #b45309;
+  --accent-hover: #92400e;
+  --accent-light: rgba(180, 83, 9, 0.1);
+  --border: #d8d5cb;
+  --border-light: #c8c5ba;
 }
 
 * {
@@ -70,9 +156,9 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="light"] .app-header {
-  background-color: #ffffff;
-  border-bottom: 2px solid #cbd5e1;
+[data-theme^="light"] .app-header {
+  background-color: var(--bg-secondary);
+  border-bottom: 2px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
@@ -110,8 +196,8 @@ body {
   letter-spacing: -0.2px;
 }
 
-[data-theme="light"] .brand-name {
-  color: #0f172a;
+[data-theme^="light"] .brand-name {
+  color: var(--text-main);
 }
 
 .brand-subtitle {
@@ -120,23 +206,23 @@ body {
   font-weight: 700;
 }
 
-[data-theme="light"] .brand-subtitle {
-  color: #0284c7;
+[data-theme^="light"] .brand-subtitle {
+  color: var(--accent);
 }
 
 .mode-selector {
   display: flex;
-  background-color: #1e293b;
+  background-color: var(--bg-surface);
   padding: 3px;
   border-radius: 8px;
-  border: 1px solid #475569;
+  border: 1px solid var(--border);
   gap: 3px;
   flex-shrink: 0;
 }
 
-[data-theme="light"] .mode-selector {
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
+[data-theme^="light"] .mode-selector {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border);
 }
 
 .mode-btn {
@@ -154,8 +240,8 @@ body {
   transition: all 0.15s ease;
 }
 
-[data-theme="light"] .mode-btn {
-  color: #475569;
+[data-theme^="light"] .mode-btn {
+  color: var(--text-muted);
 }
 
 .mode-btn.active {
@@ -172,9 +258,9 @@ body {
 }
 
 .btn {
-  background-color: #1e293b;
-  color: #ffffff; /* Bold crisp white */
-  border: 1px solid #475569;
+  background-color: var(--bg-tertiary);
+  color: var(--text-main);
+  border: 1px solid var(--border);
   padding: 6px 11px;
   border-radius: 6px;
   font-size: 12.5px;
@@ -187,21 +273,21 @@ body {
   white-space: nowrap;
 }
 
-[data-theme="light"] .btn {
-  background-color: #f8fafc;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
+[data-theme^="light"] .btn {
+  background-color: var(--bg-secondary);
+  color: var(--text-main);
+  border: 1px solid var(--border);
 }
 
 .btn:hover {
-  background-color: #334155;
-  border-color: #64748b;
-  color: #ffffff;
+  background-color: var(--bg-surface);
+  border-color: var(--border-light);
+  color: var(--text-main);
 }
 
-[data-theme="light"] .btn:hover {
-  background-color: #e2e8f0;
-  color: #0f172a;
+[data-theme^="light"] .btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-main);
 }
 
 .btn-primary {
@@ -217,13 +303,13 @@ body {
   color: #ffffff !important;
 }
 
-[data-theme="light"] .btn-primary {
+[data-theme^="light"] .btn-primary {
   background-color: #2563eb !important;
   color: #ffffff !important;
   border: 1px solid #1d4ed8 !important;
 }
 
-[data-theme="light"] .btn-primary:hover {
+[data-theme^="light"] .btn-primary:hover {
   background-color: #1d4ed8 !important;
   color: #ffffff !important;
 }
@@ -240,13 +326,13 @@ body {
   border-color: #10b981;
 }
 
-[data-theme="light"] #btn-eclass {
+[data-theme^="light"] #btn-eclass {
   background-color: #ecfdf5;
   border-color: #10b981;
   color: #065f46 !important;
 }
 
-[data-theme="light"] #btn-eclass:hover {
+[data-theme^="light"] #btn-eclass:hover {
   background-color: #d1fae5;
 }
 
@@ -566,7 +652,7 @@ body {
   width: 0 !important;
 }
 
-[data-theme="light"] .CodeMirror-cursor {
+[data-theme^="light"] .CodeMirror-cursor {
   border-left: 2px solid #2563eb !important; /* Royal Blue cursor in Light theme */
 }
 
@@ -575,23 +661,38 @@ body {
   background-color: rgba(56, 189, 248, 0.25) !important;
 }
 
-[data-theme="light"] .CodeMirror-selected {
+[data-theme^="light"] .CodeMirror-selected {
   background-color: rgba(37, 99, 235, 0.2) !important;
 }
 
-/* Light Theme CodeMirror backgrounds */
-[data-theme="light"] .CodeMirror {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+/* Light Themes CodeMirror backgrounds */
+[data-theme^="light"] .CodeMirror {
+  background-color: var(--bg-input) !important;
+  color: var(--text-main) !important;
 }
 
-[data-theme="light"] .CodeMirror-gutters {
-  background-color: #f8fafc !important;
-  border-right: 1px solid #e2e8f0 !important;
+[data-theme^="light"] .CodeMirror-gutters {
+  background-color: var(--bg-secondary) !important;
+  border-right: 1px solid var(--border) !important;
 }
 
-[data-theme="light"] .CodeMirror-linenumber {
-  color: #64748b !important;
+[data-theme^="light"] .CodeMirror-linenumber {
+  color: var(--text-muted) !important;
+}
+
+/* Dark Themes CodeMirror backgrounds - overrides dracula's pitch black with theme's rich gray tones */
+[data-theme^="dark"] .CodeMirror {
+  background-color: var(--bg-input) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme^="dark"] .CodeMirror-gutters {
+  background-color: var(--bg-secondary) !important;
+  border-right: 1px solid var(--border) !important;
+}
+
+[data-theme^="dark"] .CodeMirror-linenumber {
+  color: var(--text-muted) !important;
 }
 
 /* CODEMIRROR AUTOCOMPLETE / NOTEPAD++ STYLE HINT POPUP */
@@ -653,31 +754,31 @@ li.CodeMirror-hint-active::before {
 }
 
 /* Dark Theme variant preserving the crisp Notepad++ feel */
-[data-theme="dark"] .CodeMirror-hints {
-  background: #1e293b !important;
-  border: 1px solid #475569 !important;
+[data-theme^="dark"] .CodeMirror-hints {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border) !important;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6) !important;
 }
 
-[data-theme="dark"] .CodeMirror-hint {
-  color: #f8fafc !important;
+[data-theme^="dark"] .CodeMirror-hint {
+  color: var(--text-main) !important;
 }
 
-[data-theme="dark"] .CodeMirror-hint::before {
-  color: #94a3b8;
+[data-theme^="dark"] .CodeMirror-hint::before {
+  color: var(--text-muted);
 }
 
-[data-theme="dark"] .CodeMirror-hint:hover {
-  background: #334155 !important;
-  color: #38bdf8 !important;
+[data-theme^="dark"] .CodeMirror-hint:hover {
+  background: var(--bg-tertiary) !important;
+  color: var(--accent) !important;
 }
 
-[data-theme="dark"] li.CodeMirror-hint-active {
+[data-theme^="dark"] li.CodeMirror-hint-active {
   background: #0284c7 !important;
   color: #ffffff !important;
 }
 
-[data-theme="dark"] li.CodeMirror-hint-active::before {
+[data-theme^="dark"] li.CodeMirror-hint-active::before {
   color: #ffffff !important;
 }
 
@@ -1055,7 +1156,7 @@ li.CodeMirror-hint-active::before {
   overflow: hidden;
 }
 
-[data-theme="light"] .splash-card {
+[data-theme^="light"] .splash-card {
   background: linear-gradient(145deg, #ffffff, #f1f5f9);
   border-color: rgba(59, 130, 246, 0.4);
   color: #0f172a;
@@ -1127,7 +1228,7 @@ li.CodeMirror-hint-active::before {
   margin: 0;
 }
 
-[data-theme="light"] .splash-title {
+[data-theme^="light"] .splash-title {
   color: #0f172a;
 }
 
@@ -1137,7 +1238,7 @@ li.CodeMirror-hint-active::before {
   margin: 0 0 18px;
 }
 
-[data-theme="light"] .splash-subtitle {
+[data-theme^="light"] .splash-subtitle {
   color: #475569;
 }
 
@@ -1159,7 +1260,7 @@ li.CodeMirror-hint-active::before {
   margin-bottom: 22px;
 }
 
-[data-theme="light"] .splash-creator {
+[data-theme^="light"] .splash-creator {
   background: rgba(241, 245, 249, 0.85);
   border-color: rgba(203, 213, 225, 0.8);
 }
@@ -1196,7 +1297,7 @@ li.CodeMirror-hint-active::before {
   color: #f1f5f9;
 }
 
-[data-theme="light"] .creator-name {
+[data-theme^="light"] .creator-name {
   color: #0f172a;
 }
 
@@ -1211,7 +1312,7 @@ li.CodeMirror-hint-active::before {
   color: #94a3b8;
 }
 
-[data-theme="light"] .creator-school {
+[data-theme^="light"] .creator-school {
   color: #64748b;
 }
 
@@ -1287,7 +1388,7 @@ li.CodeMirror-hint-active::before {
   padding: 16px;
 }
 
-[data-theme="light"] .about-creator-card {
+[data-theme^="light"] .about-creator-card {
   background: linear-gradient(135deg, #f8fafc, #edf2f7);
   border-color: rgba(59, 130, 246, 0.4);
 }
@@ -1324,7 +1425,7 @@ li.CodeMirror-hint-active::before {
   gap: 8px;
 }
 
-[data-theme="light"] .about-app-title {
+[data-theme^="light"] .about-app-title {
   color: #0f172a;
 }
 
@@ -1389,7 +1490,7 @@ li.CodeMirror-hint-active::before {
   gap: 8px;
 }
 
-[data-theme="light"] .license-summary-box {
+[data-theme^="light"] .license-summary-box {
   background: #f0fdf4;
   border-color: #86efac;
 }
@@ -1503,6 +1604,39 @@ li.CodeMirror-hint-active::before {
   font-size: 11px;
   color: var(--accent);
   box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Update Notification Badge in Status Bar */
+.update-badge {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  border-radius: 12px;
+  padding: 2px 10px !important;
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+  font-size: 11.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  animation: pulse-badge 2.5s infinite;
+}
+
+[data-theme^="light"] .update-badge {
+  background: rgba(37, 99, 235, 0.12) !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+  color: #2563eb !important;
+}
+
+.update-badge:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
 }
 
 

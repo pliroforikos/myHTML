@@ -86,8 +86,59 @@ h2 {
 let appSettings = {
   saveDirectory: '',
   browser: 'msedge',
-  hideBeginnerControls: false
+  hideBeginnerControls: false,
+  theme: 'dark-charcoal',
+  lastDarkTheme: 'dark-charcoal',
+  lastLightTheme: 'light-gray'
 };
+
+const THEMES = {
+  'dark-charcoal': { name: 'Σκοτεινό Ανθρακί (Ζεστές Αποχρώσεις του Γκρι)', mode: 'dark' },
+  'dark-graphite': { name: 'Σκοτεινό Γραφίτη (One Dark / Cool Gray)', mode: 'dark' },
+  'dark-steel': { name: 'Σκοτεινό Μολυβί (VS Code Classic Neutral Gray)', mode: 'dark' },
+  'dark': { name: 'Σκοτεινό Slate (Αρχική Προεπιλογή)', mode: 'dark' },
+  'light-gray': { name: 'Φωτεινό Απαλό Γκρι (Soft Gray & White)', mode: 'light' },
+  'light-warm': { name: 'Φωτεινό Ζεστό Λευκό (Warm Sand & Off-White)', mode: 'light' },
+  'light': { name: 'Φωτεινό Λευκό (Αρχική Προεπιλογή)', mode: 'light' }
+};
+
+// Παρακολούθηση τρέχοντος αποθηκευμένου/ανοιγμένου αρχείου
+let currentHtmlFilePath = null;
+let currentCssFilePath = null;
+
+// Βοηθητικές συναρτήσεις διαδρομών & φακέλου εργασίας (Working Directory)
+function getDirectoryFromPath(filePath) {
+  if (!filePath) return '';
+  const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  if (lastSlash !== -1) {
+    return filePath.substring(0, lastSlash);
+  }
+  return '';
+}
+
+function getCurrentWorkingDir() {
+  if (currentHtmlFilePath) {
+    const dir = getDirectoryFromPath(currentHtmlFilePath);
+    if (dir) return dir;
+  }
+  return appSettings.saveDirectory || '';
+}
+
+function getBaseHref(workingDir) {
+  if (!workingDir) return '';
+  let normalized = workingDir.replace(/\\/g, '/');
+  if (!normalized.endsWith('/')) {
+    normalized += '/';
+  }
+  if (!normalized.startsWith('file:///')) {
+    if (normalized.startsWith('/')) {
+      normalized = 'file://' + normalized;
+    } else {
+      normalized = 'file:///' + normalized;
+    }
+  }
+  return normalized;
+}
 
 const BROWSER_NAMES = {
   msedge: 'Edge',
@@ -113,6 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
   try { initAppVersion(); } catch (e) { console.error('Version init:', e); }
   try { updateLivePreview(); } catch (e) { console.error('Preview update:', e); }
   try { validateHtmlCode(); } catch (e) { console.error('Validation:', e); }
+
+  // Αθόρυβος έλεγχος ενημερώσεων στο background λίγο μετά την εκκίνηση
+  setTimeout(() => {
+    try { checkAppUpdates(true); } catch(e) { console.warn('Auto update check error:', e); }
+  }, 3500);
 });
 
 // Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
@@ -337,22 +393,39 @@ function switchTab(tab) {
 }
 
 // Σύνθεση τελικού κώδικα HTML για προεπισκόπηση και εξωτερικό browser
-function getCompiledHTML() {
-  const htmlContent = htmlDoc.getValue();
+function getCompiledHTML(includeBase = true) {
+  let htmlContent = htmlDoc.getValue();
 
-  if (currentMode === 'beginner') {
-    return htmlContent;
-  } else {
+  if (currentMode !== 'beginner') {
     // Στη λειτουργία προχωρημένου, ενσωματώνουμε το CSS στο <head> αν υπάρχει
     const cssContent = cssDoc.getValue();
     const styleTag = `<style>\n${cssContent}\n</style>`;
 
     if (htmlContent.includes('</head>')) {
-      return htmlContent.replace('</head>', `${styleTag}\n</head>`);
+      htmlContent = htmlContent.replace('</head>', `${styleTag}\n</head>`);
     } else {
-      return `${styleTag}\n${htmlContent}`;
+      htmlContent = `${styleTag}\n${htmlContent}`;
     }
   }
+
+  // Εισαγωγή <base href="..."> για σωστή ανάλυση σχετικών διαδρομών εικόνων στον φάκελο εργασίας
+  if (includeBase) {
+    const workingDir = getCurrentWorkingDir();
+    if (workingDir && !htmlContent.includes('<base ') && !htmlContent.includes('<base>')) {
+      const baseHref = getBaseHref(workingDir);
+      const baseTag = `<base href="${baseHref}">`;
+
+      if (/<head\b[^>]*>/i.test(htmlContent)) {
+        htmlContent = htmlContent.replace(/(<head\b[^>]*>)/i, `$1\n  ${baseTag}`);
+      } else if (/<html\b[^>]*>/i.test(htmlContent)) {
+        htmlContent = htmlContent.replace(/(<html\b[^>]*>)/i, `$1\n<head>\n  ${baseTag}\n</head>`);
+      } else {
+        htmlContent = `<head>\n  ${baseTag}\n</head>\n${htmlContent}`;
+      }
+    }
+  }
+
+  return htmlContent;
 }
 
 // Ενημέρωση του ενσωματωμένου browser preview
@@ -379,12 +452,15 @@ async function openInExternalBrowser(options = {}) {
   const browser = (options && options.browser) ? options.browser : (appSettings.browser || 'msedge');
   const isUrl = !!(options && options.isUrl && options.url);
   const targetUrl = isUrl ? options.url : '';
+  const workingDir = getCurrentWorkingDir();
 
   const payload = {
     content: compiled,
     browser: browser,
     isUrl: isUrl,
-    url: targetUrl
+    url: targetUrl,
+    filePath: currentHtmlFilePath,
+    workingDir: workingDir
   };
 
   const browserLabel = getBrowserName(browser);
@@ -763,33 +839,59 @@ async function exportZip() {
 }
 
 // Αποθήκευση αρχείου
-async function saveCurrentFile() {
-  const content = (activeTab === 'html') ? htmlDoc.getValue() : cssDoc.getValue();
-  const defaultExt = (activeTab === 'html') ? 'html' : 'css';
-  const defaultName = (activeTab === 'html') ? 'index.html' : 'style.css';
+async function saveCurrentFile(isSaveAs = false) {
+  const isHtml = (activeTab === 'html');
+  const content = isHtml ? htmlDoc.getValue() : cssDoc.getValue();
+  const defaultExt = isHtml ? 'html' : 'css';
+  const currentPath = isHtml ? currentHtmlFilePath : currentCssFilePath;
+  const defaultName = currentPath || (isHtml ? 'index.html' : 'style.css');
 
-  if (window.electronAPI && window.electronAPI.saveFile) {
-    const res = await window.electronAPI.saveFile({
-      defaultPath: defaultName,
-      content: content,
-      filters: [{ name: `${defaultExt.toUpperCase()} File`, extensions: [defaultExt] }]
-    });
+  if (window.electronAPI) {
+    // Αν δεν είναι "Αποθήκευση ως..." και το αρχείο έχει ήδη αποθηκευτεί στο δίσκο, κάνουμε άμεση αποθήκευση
+    if (!isSaveAs && currentPath && window.electronAPI.saveFileDirect) {
+      const resDirect = await window.electronAPI.saveFileDirect({
+        filePath: currentPath,
+        content: content
+      });
 
-    if (res.success) {
-      document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
-      showToast(`Το αρχείο ${defaultName} αποθηκεύτηκε επιτυχώς!`);
+      if (resDirect.success) {
+        document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
+        showToast('Το αρχείο αποθηκεύτηκε επιτυχώς!');
+        updateLivePreview();
+        return;
+      }
+    }
+
+    // Αλλιώς ανοίγουμε διάλογο αποθήκευσης
+    if (window.electronAPI.saveFile) {
+      const res = await window.electronAPI.saveFile({
+        defaultPath: defaultName,
+        content: content,
+        filters: [{ name: `${defaultExt.toUpperCase()} File`, extensions: [defaultExt] }]
+      });
+
+      if (res.success && res.filePath) {
+        if (isHtml) {
+          currentHtmlFilePath = res.filePath;
+        } else {
+          currentCssFilePath = res.filePath;
+        }
+        document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
+        showToast(`Το αρχείο αποθηκεύτηκε επιτυχώς!`);
+        updateLivePreview();
+      }
     }
   } else {
     // Browser download fallback
     const blob = new Blob([content], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = defaultName;
+    a.download = isHtml ? 'index.html' : 'style.css';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
-    showToast(`Το αρχείο ${defaultName} λήφθηκε επιτυχώς!`);
+    showToast(`Το αρχείο λήφθηκε επιτυχώς!`);
   }
 }
 
@@ -801,11 +903,14 @@ async function openFile() {
       if (res.filePath.endsWith('.css')) {
         if (currentMode === 'beginner') setMode('advanced');
         cssDoc.setValue(res.content);
+        currentCssFilePath = res.filePath;
         switchTab('css');
       } else {
         htmlDoc.setValue(res.content);
+        currentHtmlFilePath = res.filePath;
         switchTab('html');
       }
+      document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
       updateLivePreview();
       validateHtmlCode();
       showToast(`Ανοίχθηκε το αρχείο: ${res.filePath}`);
@@ -822,11 +927,14 @@ async function openFile() {
           if (file.name.endsWith('.css')) {
             if (currentMode === 'beginner') setMode('advanced');
             cssDoc.setValue(evt.target.result);
+            currentCssFilePath = file.name;
             switchTab('css');
           } else {
             htmlDoc.setValue(evt.target.result);
+            currentHtmlFilePath = file.name;
             switchTab('html');
           }
+          document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
           updateLivePreview();
           validateHtmlCode();
           showToast(`Ανοίχθηκε: ${file.name}`);
@@ -842,9 +950,12 @@ async function openFile() {
 function createNewFile() {
   if (confirm('Θέλετε να ξεκινήσετε ένα νέο κενό έγγραφο;')) {
     htmlDoc.setValue(cleanNewSkeleton);
+    currentHtmlFilePath = null;
+    currentCssFilePath = null;
     if (currentMode === 'advanced') {
       cssDoc.setValue('/* style.css */\n');
     }
+    document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
     updateLivePreview();
     validateHtmlCode();
     showToast('Δημιουργήθηκε νέο κενό έγγραφο.');
@@ -894,22 +1005,50 @@ function adjustFontSize(delta) {
   showToast(`Μέγεθος γραμματοσειράς: ${currentFontSize}px`);
 }
 
-function toggleTheme() {
+function applyTheme(themeName) {
+  if (!THEMES[themeName]) themeName = 'dark-charcoal';
   const body = document.body;
-  const currentTheme = body.getAttribute('data-theme') || 'dark';
-  const newTheme = (currentTheme === 'dark') ? 'light' : 'dark';
-  body.setAttribute('data-theme', newTheme);
+  body.setAttribute('data-theme', themeName);
   
+  const isLight = themeName.startsWith('light');
   if (editor) {
-    editor.setOption('theme', newTheme === 'dark' ? 'dracula' : 'eclipse');
+    editor.setOption('theme', isLight ? 'eclipse' : 'dracula');
     editor.refresh();
   }
 
   if (window.electronAPI && window.electronAPI.setTheme) {
-    window.electronAPI.setTheme(newTheme);
+    window.electronAPI.setTheme(themeName);
   }
 
-  showToast(`Ενεργοποιήθηκε ${newTheme === 'light' ? 'φωτεινό' : 'σκοτεινό'} θέμα`);
+  appSettings.theme = themeName;
+}
+
+function toggleTheme() {
+  const current = document.body.getAttribute('data-theme') || 'dark';
+  let nextTheme;
+  if (current.startsWith('dark')) {
+    nextTheme = (appSettings.lastLightTheme && THEMES[appSettings.lastLightTheme])
+      ? appSettings.lastLightTheme
+      : 'light-gray';
+    appSettings.lastDarkTheme = current;
+  } else {
+    nextTheme = (appSettings.lastDarkTheme && THEMES[appSettings.lastDarkTheme])
+      ? appSettings.lastDarkTheme
+      : 'dark-charcoal';
+    appSettings.lastLightTheme = current;
+  }
+
+  applyTheme(nextTheme);
+
+  if (window.electronAPI && window.electronAPI.saveSettings) {
+    window.electronAPI.saveSettings(appSettings);
+  }
+
+  const themeSelect = document.getElementById('setting-theme-select');
+  if (themeSelect) themeSelect.value = nextTheme;
+
+  const displayName = THEMES[nextTheme] ? THEMES[nextTheme].name : nextTheme;
+  showToast(`Ενεργοποιήθηκε θέμα: ${displayName}`);
 }
 
 // --- ΔΙΑΧΕΙΡΙΣΗ ΡΥΘΜΙΣΕΩΝ (SETTINGS) ---
@@ -922,6 +1061,7 @@ async function initSettings() {
       console.error('Σφάλμα φόρτωσης ρυθμίσεων:', err);
     }
   }
+  applyTheme(appSettings.theme || 'dark-charcoal');
   updateBrowserButton();
   applyModeVisibility();
   populateSettingsUI();
@@ -947,10 +1087,17 @@ function applyModeVisibility() {
 }
 
 function populateSettingsUI() {
+  const themeSelect = document.getElementById('setting-theme-select');
   const browserSelect = document.getElementById('setting-browser-select');
   const folderInput = document.getElementById('setting-folder-input');
   const hideCheckbox = document.getElementById('setting-hide-beginner-controls');
 
+  if (themeSelect) {
+    themeSelect.value = appSettings.theme || 'dark-charcoal';
+    themeSelect.onchange = (e) => {
+      applyTheme(e.target.value);
+    };
+  }
   if (browserSelect) browserSelect.value = appSettings.browser || 'msedge';
   if (folderInput) folderInput.value = appSettings.saveDirectory || '';
   if (hideCheckbox) hideCheckbox.checked = !!appSettings.hideBeginnerControls;
@@ -966,13 +1113,17 @@ async function browseFolder() {
 }
 
 async function saveCurrentSettings() {
+  const theme = document.getElementById('setting-theme-select') ? document.getElementById('setting-theme-select').value : (appSettings.theme || 'dark-charcoal');
   const browser = document.getElementById('setting-browser-select').value;
   const folder = document.getElementById('setting-folder-input').value;
   const hideControls = document.getElementById('setting-hide-beginner-controls').checked;
 
+  appSettings.theme = theme;
   appSettings.browser = browser;
   appSettings.saveDirectory = folder;
   appSettings.hideBeginnerControls = hideControls;
+
+  applyTheme(theme);
 
   if (window.electronAPI && window.electronAPI.saveSettings) {
     await window.electronAPI.saveSettings(appSettings);
@@ -982,6 +1133,71 @@ async function saveCurrentSettings() {
   applyModeVisibility();
   closeModal('settings-modal');
   showToast('Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς!');
+}
+
+// --- ΔΙΑΧΕΙΡΙΣΗ ΕΝΗΜΕΡΩΣΕΩΝ (IN-APP UPDATER) ---
+let latestUpdateInfo = null;
+
+async function checkAppUpdates(silent = false) {
+  if (!window.electronAPI || !window.electronAPI.checkForUpdates) {
+    if (!silent) showToast('Η λειτουργία ενημερώσεων δεν είναι διαθέσιμη.');
+    return;
+  }
+
+  if (!silent) {
+    showToast('Έλεγχος για νεότερη έκδοση στο GitHub...');
+  }
+
+  try {
+    const res = await window.electronAPI.checkForUpdates();
+    if (!res || !res.success) {
+      if (!silent) {
+        showToast('⚠️ Δεν ήταν δυνατή η σύνδεση για έλεγχο ενημερώσεων.');
+      }
+      return;
+    }
+
+    if (res.hasUpdate) {
+      latestUpdateInfo = res;
+      const badge = document.getElementById('status-update-badge');
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.textContent = `✨ Νέα έκδοση ${res.latestVersion}!`;
+      }
+
+      showUpdateModal(res);
+    } else {
+      if (!silent) {
+        showToast(`✔ Έχετε την πιο πρόσφατη έκδοση (${res.latestVersion || 'v1.3.1'})!`);
+      }
+    }
+  } catch (err) {
+    console.error('Update check error:', err);
+    if (!silent) {
+      showToast('⚠️ Σφάλμα κατά τον έλεγχο ενημερώσεων.');
+    }
+  }
+}
+
+function showUpdateModal(info) {
+  const curEl = document.getElementById('update-current-version');
+  const latEl = document.getElementById('update-latest-version');
+  const notesEl = document.getElementById('update-release-notes');
+  const dlBtn = document.getElementById('btn-download-update');
+
+  if (curEl) curEl.textContent = `v${info.currentVersion}`;
+  if (latEl) latEl.textContent = info.latestVersion;
+  if (notesEl) {
+    notesEl.textContent = info.releaseNotes || 'Δεν υπάρχουν διαθέσιμες σημειώσεις έκδοσης στο αποθετήριο GitHub.';
+  }
+  if (dlBtn) {
+    dlBtn.onclick = () => {
+      openInExternalBrowser({ isUrl: true, url: info.downloadUrl });
+      closeModal('update-modal');
+    };
+  }
+
+  openModal('update-modal');
 }
 
 // Ρύθμιση Resizing & Event Listeners
@@ -997,7 +1213,7 @@ function setupEventListeners() {
   // Toolbar actions
   document.getElementById('btn-new').onclick = createNewFile;
   document.getElementById('btn-open').onclick = openFile;
-  document.getElementById('btn-save').onclick = saveCurrentFile;
+  document.getElementById('btn-save').onclick = () => saveCurrentFile(false);
   document.getElementById('btn-export-zip').onclick = exportZip;
   document.getElementById('btn-format').onclick = formatCode;
   document.getElementById('btn-templates').onclick = () => openModal('templates-modal');
@@ -1043,6 +1259,26 @@ function setupEventListeners() {
   if (btnBrowse) btnBrowse.onclick = browseFolder;
   const btnSaveSettings = document.getElementById('btn-save-settings');
   if (btnSaveSettings) btnSaveSettings.onclick = saveCurrentSettings;
+
+  // Κουμπιά ελέγχου ενημερώσεων
+  const btnCheckUpdatesSettings = document.getElementById('btn-check-updates-settings');
+  if (btnCheckUpdatesSettings) {
+    btnCheckUpdatesSettings.onclick = () => checkAppUpdates(false);
+  }
+  const btnCheckUpdatesAbout = document.getElementById('btn-check-updates-about');
+  if (btnCheckUpdatesAbout) {
+    btnCheckUpdatesAbout.onclick = () => checkAppUpdates(false);
+  }
+  const statusUpdateBadge = document.getElementById('status-update-badge');
+  if (statusUpdateBadge) {
+    statusUpdateBadge.onclick = () => {
+      if (latestUpdateInfo) {
+        showUpdateModal(latestUpdateInfo);
+      } else {
+        checkAppUpdates(false);
+      }
+    };
+  }
 
   // Window Controls (Πλήρης Οθόνη)
   const btnFull = document.getElementById('btn-win-fullscreen');
@@ -1091,7 +1327,7 @@ function setupEventListeners() {
     if (e.ctrlKey || e.metaKey) {
       if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
-        saveCurrentFile();
+        saveCurrentFile(e.shiftKey);
       } else if (e.key === 'b' || e.key === 'B') {
         e.preventDefault();
         openInExternalBrowser();
@@ -1220,8 +1456,8 @@ function setupElectronMenuBridge() {
 
   window.electronAPI.onMenuNew(() => createNewFile());
   window.electronAPI.onMenuOpen(() => openFile());
-  window.electronAPI.onMenuSave(() => saveCurrentFile());
-  window.electronAPI.onMenuSaveAs(() => saveCurrentFile());
+  window.electronAPI.onMenuSave(() => saveCurrentFile(false));
+  window.electronAPI.onMenuSaveAs(() => saveCurrentFile(true));
   window.electronAPI.onMenuExportZip(() => exportZip());
   window.electronAPI.onMenuRefreshPreview(() => updateLivePreview());
   window.electronAPI.onMenuOpenEdge(() => openInExternalBrowser());
@@ -1229,4 +1465,7 @@ function setupElectronMenuBridge() {
   window.electronAPI.onMenuToggleMode(() => setMode(currentMode === 'beginner' ? 'advanced' : 'beginner'));
   window.electronAPI.onMenuFormatCode(() => formatCode());
   window.electronAPI.onMenuAbout(() => openModal('about-modal'));
+  if (window.electronAPI.onMenuCheckUpdates) {
+    window.electronAPI.onMenuCheckUpdates(() => checkAppUpdates(false));
+  }
 }
