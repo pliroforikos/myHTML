@@ -179,7 +179,7 @@ function loadSettings() {
     saveDirectory: defaultWebpagesDir,
     browser: 'msedge', // 'msedge' | 'chrome' | 'firefox' | 'brave' | 'default'
     hideBeginnerControls: false,
-    theme: 'dark' // 'dark' | 'dark-charcoal' | 'dark-graphite' | 'dark-steel' | 'light' | 'light-gray' | 'light-warm'
+    theme: 'dark-charcoal' // 'dark' | 'dark-charcoal' | 'dark-graphite' | 'dark-steel' | 'light' | 'light-gray' | 'light-warm'
   };
   try {
     const sPath = getSettingsPath();
@@ -309,36 +309,15 @@ ipcMain.handle('app:openInExternalBrowser', async (event, payload) => {
 
     if (payload && payload.isUrl && payload.url) {
       target = payload.url;
-    } else if (payload && payload.filePath && fs.existsSync(payload.filePath)) {
-      // Αν το αρχείο έχει ήδη αποθηκευτεί, συγχρονίζουμε το τελευταίο περιεχόμενο και ανοίγουμε το πραγματικό αρχείο
-      if (payload.content) {
-        try {
-          fs.writeFileSync(payload.filePath, payload.content, 'utf-8');
-        } catch (e) {
-          console.error('Σφάλμα συγχρονισμού αρχείου πριν το άνοιγμα στον browser:', e);
-        }
-      }
-      target = payload.filePath;
     } else {
-      // Αν δεν έχει αποθηκευτεί ακόμα με όνομα, το αποθηκεύουμε προσωρινά στον φάκελο εργασίας του χρήστη
-      // ώστε ο browser να μπορεί να βρει τις εικόνες του
-      const baseDir = (payload && payload.workingDir && fs.existsSync(payload.workingDir))
-        ? payload.workingDir
-        : ((settings.saveDirectory && fs.existsSync(settings.saveDirectory)) ? settings.saveDirectory : defaultWebpagesDir);
-
+      // Το περιεχόμενο (HTML + ενσωματωμένο CSS) γράφεται σε ΠΡΟΣΩΡΙΝΟ αρχείο στον φάκελο temp του συστήματος.
+      // Το αρχείο του χρήστη δεν τροποποιείται ποτέ και δεν δημιουργούνται βοηθητικά αρχεία στον φάκελο εργασίας του.
+      // Οι σχετικές διαδρομές εικόνων επιλύονται μέσω του <base href> που έχει ήδη προστεθεί στο περιεχόμενο.
       const htmlContent = (typeof payload === 'string') ? payload : (payload && payload.content ? payload.content : '');
-      let tempFile;
-      try {
-        if (!fs.existsSync(baseDir)) {
-          fs.mkdirSync(baseDir, { recursive: true });
-        }
-        tempFile = path.join(baseDir, '_preview_temp.html');
-        fs.writeFileSync(tempFile, htmlContent, 'utf-8');
-      } catch (err) {
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eduhtml-'));
-        tempFile = path.join(tempDir, 'preview.html');
-        fs.writeFileSync(tempFile, htmlContent, 'utf-8');
-      }
+      const previewDir = path.join(os.tmpdir(), 'eduhtml-studio-preview');
+      fs.mkdirSync(previewDir, { recursive: true });
+      const tempFile = path.join(previewDir, 'preview.html');
+      fs.writeFileSync(tempFile, htmlContent, 'utf-8');
       target = tempFile;
     }
 

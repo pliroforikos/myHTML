@@ -131,8 +131,12 @@ function getBaseHref(workingDir) {
   if (!normalized.endsWith('/')) {
     normalized += '/';
   }
-  if (!normalized.startsWith('file:///')) {
-    if (normalized.startsWith('/')) {
+  // Κωδικοποίηση ειδικών χαρακτήρων (κενά, ελληνικά, #, %, ?) ώστε η διαδρομή να είναι έγκυρο URL
+  normalized = encodeURI(normalized).replace(/#/g, '%23').replace(/\?/g, '%3F');
+  if (!normalized.startsWith('file:')) {
+    if (normalized.startsWith('//')) {
+      normalized = 'file:' + normalized; // Διαδρομή δικτύου (UNC): \\server\share
+    } else if (normalized.startsWith('/')) {
       normalized = 'file://' + normalized;
     } else {
       normalized = 'file:///' + normalized;
@@ -140,6 +144,18 @@ function getBaseHref(workingDir) {
   }
   return normalized;
 }
+
+// Το <base href> αλλάζει τη σημασία των συνδέσμων της μορφής href="#ενότητα" (θα οδηγούσαν έξω από τη σελίδα).
+// Το μικρό αυτό script τους κρατά μέσα στη σελίδα (κύλιση στο στοιχείο με το αντίστοιχο id).
+const BASE_FRAGMENT_FIX_SCRIPT =
+  '<script>document.addEventListener("click",function(e){' +
+  'var a=e.target&&e.target.closest?e.target.closest(\'a[href^="#"]\'):null;' +
+  'if(!a||e.defaultPrevented)return;' +
+  'var id=a.getAttribute("href").slice(1);try{id=decodeURIComponent(id);}catch(x){}' +
+  'var t=id?(document.getElementById(id)||document.getElementsByName(id)[0]):null;' +
+  'e.preventDefault();' +
+  'if(t){t.scrollIntoView();}else if(!id||id.toLowerCase()==="top"){window.scrollTo(0,0);}' +
+  '});<\/script>';
 
 const BROWSER_NAMES = {
   msedge: 'Edge',
@@ -175,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
 async function initAppVersion() {
-  let appVersion = '1.5.0';
+  let appVersion = '1.5.1';
   if (window.electronAPI && window.electronAPI.getVersion) {
     try {
       const v = await window.electronAPI.getVersion();
@@ -421,12 +437,13 @@ function getCompiledHTML(includeBase = true) {
     const workingDir = getCurrentWorkingDir();
     if (workingDir && !htmlContent.includes('<base ') && !htmlContent.includes('<base>')) {
       const baseHref = getBaseHref(workingDir);
-      const baseTag = `<base href="${baseHref}">`;
+      const baseTag = `<base href="${baseHref}">\n  ${BASE_FRAGMENT_FIX_SCRIPT}`;
 
+      // Χρήση συνάρτησης στο replace ώστε χαρακτήρες όπως "$" στη διαδρομή να μην ερμηνευτούν ως ειδικά μοτίβα
       if (/<head\b[^>]*>/i.test(htmlContent)) {
-        htmlContent = htmlContent.replace(/(<head\b[^>]*>)/i, `$1\n  ${baseTag}`);
+        htmlContent = htmlContent.replace(/<head\b[^>]*>/i, (m) => `${m}\n  ${baseTag}`);
       } else if (/<html\b[^>]*>/i.test(htmlContent)) {
-        htmlContent = htmlContent.replace(/(<html\b[^>]*>)/i, `$1\n<head>\n  ${baseTag}\n</head>`);
+        htmlContent = htmlContent.replace(/<html\b[^>]*>/i, (m) => `${m}\n<head>\n  ${baseTag}\n</head>`);
       } else {
         htmlContent = `<head>\n  ${baseTag}\n</head>\n${htmlContent}`;
       }
@@ -480,15 +497,12 @@ async function openInExternalBrowser(options = {}) {
   const browser = (options && options.browser) ? options.browser : (appSettings.browser || 'msedge');
   const isUrl = !!(options && options.isUrl && options.url);
   const targetUrl = isUrl ? options.url : '';
-  const workingDir = getCurrentWorkingDir();
 
   const payload = {
     content: compiled,
     browser: browser,
     isUrl: isUrl,
-    url: targetUrl,
-    filePath: currentHtmlFilePath,
-    workingDir: workingDir
+    url: targetUrl
   };
 
   const browserLabel = getBrowserName(browser);
@@ -828,6 +842,9 @@ function initTemplatesModal() {
 
 function loadTemplate(tpl) {
   if (confirm(`Θέλετε να φορτώσετε το πρότυπο «${tpl.title}»;\nΤυχόν μη αποθηκευμένες αλλαγές θα αντικατασταθούν.`)) {
+    // Το πρότυπο είναι νέο έγγραφο: η επόμενη αποθήκευση πρέπει να ζητήσει όνομα και όχι να γράψει πάνω στο αρχείο που ήταν ανοιχτό
+    currentHtmlFilePath = null;
+    currentCssFilePath = null;
     if (currentMode === 'beginner') {
       htmlDoc.setValue(tpl.singleFile);
     } else {
@@ -1206,7 +1223,7 @@ async function checkAppUpdates(silent = false) {
       showUpdateModal(res);
     } else {
       if (!silent) {
-        showToast(`✔ Έχετε την πιο πρόσφατη έκδοση (${res.latestVersion || 'v1.3.1'})!`);
+        showToast(`✔ Έχετε την πιο πρόσφατη έκδοση (${res.latestVersion || 'v' + res.currentVersion})!`);
       }
     }
   } catch (err) {

@@ -10,9 +10,9 @@
 
 | Περίπτωση | Αρχείο | Χρειάζεται διαχειριστή; |
 | :--- | :--- | :--- |
-| Ένας υπολογιστής (σπίτι ή γραφείο καθηγητή) | `EduHTML Studio-Setup-1.5.0.exe` | Όχι (μόνο αν επιλέξετε «για όλους τους χρήστες») |
-| Χωρίς εγκατάσταση, από USB stick | `EduHTML Studio-Portable-1.5.0.exe` | Όχι |
-| **Όλο το εργαστήριο / μαζική εγκατάσταση** | **`EduHTML Studio-1.5.0.msi`** | **Ναι** |
+| Ένας υπολογιστής (σπίτι ή γραφείο καθηγητή) | `EduHTML Studio-Setup-1.5.1.exe` | Όχι (μόνο αν επιλέξετε «για όλους τους χρήστες») |
+| Χωρίς εγκατάσταση, από USB stick | `EduHTML Studio-Portable-1.5.1.exe` | Όχι |
+| **Όλο το εργαστήριο / μαζική εγκατάσταση** | **`EduHTML Studio-1.5.1.msi`** | **Ναι** |
 
 > ⚠️ Μην εγκαταστήσετε **και** το Setup **και** το MSI στον ίδιο υπολογιστή: θα εμφανιστούν δύο ξεχωριστές εγκαταστάσεις. Αν υπάρχει ήδη το Setup, απεγκαταστήστε το πρώτα από τις *Ρυθμίσεις → Εφαρμογές*.
 
@@ -25,7 +25,7 @@
 
 ## 2. Εγκατάσταση σε έναν υπολογιστή (Setup)
 
-1. Κατεβάστε το `EduHTML Studio-Setup-1.5.0.exe`.
+1. Κατεβάστε το `EduHTML Studio-Setup-1.5.1.exe`.
 2. Διπλό κλικ στο αρχείο.
 3. Επιλέξτε **«Μόνο για εμένα»** ή **«Για όλους τους χρήστες»** (το δεύτερο ζητά δικαιώματα διαχειριστή).
 4. Επιλέξτε φάκελο εγκατάστασης ή αφήστε τον προεπιλεγμένο και πατήστε **Εγκατάσταση**.
@@ -39,7 +39,7 @@
 
 ## 3. Φορητή έκδοση (Portable)
 
-1. Αντιγράψτε το `EduHTML Studio-Portable-1.5.0.exe` σε USB stick ή σε οποιονδήποτε φάκελο.
+1. Αντιγράψτε το `EduHTML Studio-Portable-1.5.1.exe` σε USB stick ή σε οποιονδήποτε φάκελο.
 2. Διπλό κλικ για εκτέλεση. Δεν γίνεται εγκατάσταση και δεν χρειάζονται δικαιώματα διαχειριστή.
 
 Η πρώτη εκκίνηση αργεί λίγα δευτερόλεπτα, γιατί το αρχείο αποσυμπιέζεται προσωρινά.
@@ -61,7 +61,7 @@
 Ανοίξτε **Γραμμή εντολών ως διαχειριστής** στον φάκελο όπου βρίσκεται το MSI:
 
 ```bat
-msiexec /i "EduHTML Studio-1.5.0.msi" /qn /norestart
+msiexec /i "EduHTML Studio-1.5.1.msi" /qn /norestart
 ```
 
 | Παράμετρος | Σημασία |
@@ -80,7 +80,7 @@ msiexec /i "EduHTML Studio-1.5.0.msi" /qn /norestart
 
    ```bat
    @echo off
-   msiexec /i "\\SERVER\Λογισμικό\EduHTML Studio-1.5.0.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
+   msiexec /i "\\SERVER\Λογισμικό\EduHTML Studio-1.5.1.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
    if %errorlevel%==0 (echo Η εγκατάσταση ολοκληρώθηκε.) else (echo Σφάλμα %errorlevel% - δείτε το %TEMP%\eduhtml-install.log)
    pause
    ```
@@ -94,7 +94,7 @@ msiexec /i "EduHTML Studio-1.5.0.msi" /qn /norestart
 Ανοίξτε **PowerShell ως διαχειριστής** και προσαρμόστε τα ονόματα των υπολογιστών:
 
 ```powershell
-$msi = "C:\Εγκαταστάτες\EduHTML Studio-1.5.0.msi"
+$msi = "C:\Εγκαταστάτες\EduHTML Studio-1.5.1.msi"
 $pcs = "LAB-PC01", "LAB-PC02", "LAB-PC03"
 
 foreach ($pc in $pcs) {
@@ -125,7 +125,7 @@ foreach ($pc in $pcs) {
 ### 4.5 Με Microsoft Intune
 
 1. **Apps → Windows → Add → Line-of-business app**.
-2. Ανεβάστε το `EduHTML Studio-1.5.0.msi`.
+2. Ανεβάστε το `EduHTML Studio-1.5.1.msi`.
 3. Ανάθεση (Assignment): **Required**, σε ομάδα **συσκευών** του εργαστηρίου.
 
 ---
@@ -158,7 +158,7 @@ Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\* |
 Ή, αν έχετε το ίδιο αρχείο MSI με την εγκατεστημένη έκδοση:
 
 ```bat
-msiexec /x "EduHTML Studio-1.5.0.msi" /qn /norestart
+msiexec /x "EduHTML Studio-1.5.1.msi" /qn /norestart
 ```
 
 Η απεγκατάσταση **δεν** διαγράφει τις εργασίες των μαθητών.
@@ -188,6 +188,6 @@ msiexec /x "EduHTML Studio-1.5.0.msi" /qn /norestart
 | `1603` | Γενικό σφάλμα. Συνήθως λείπουν δικαιώματα διαχειριστή ή είναι ανοιχτή η εφαρμογή. Κλείστε το EduHTML Studio και ξανατρέξτε **ως διαχειριστής** με `/l*v "%TEMP%\eduhtml.log"` για λεπτομέρειες. |
 | `1618` | Τρέχει ήδη άλλη εγκατάσταση (π.χ. Windows Update). Δοκιμάστε ξανά σε λίγα λεπτά. |
 | «A newer version is already installed» | Είναι ήδη εγκατεστημένη νεότερη έκδοση. Δεν χρειάζεται ενέργεια. |
-| Προειδοποίηση SmartScreen | Το πρόγραμμα δεν έχει ψηφιακή υπογραφή: **Περισσότερες πληροφορίες → Εκτέλεση οπωσδήποτε**. Για αρχεία που κατεβήκατε από το internet μπορείτε επίσης να εκτελέσετε `Unblock-File ".\EduHTML Studio-1.5.0.msi"` στο PowerShell. |
+| Προειδοποίηση SmartScreen | Το πρόγραμμα δεν έχει ψηφιακή υπογραφή: **Περισσότερες πληροφορίες → Εκτέλεση οπωσδήποτε**. Για αρχεία που κατεβήκατε από το internet μπορείτε επίσης να εκτελέσετε `Unblock-File ".\EduHTML Studio-1.5.1.msi"` στο PowerShell. |
 | Δεν ανοίγει η «Προβολή» στον browser | Από **Ρυθμίσεις & Βοήθεια → Ρυθμίσεις** επιλέξτε άλλο browser ή «Προεπιλεγμένος Browser των Windows». |
 | Δύο εικονίδια EduHTML Studio | Έχουν εγκατασταθεί και το Setup και το MSI. Απεγκαταστήστε το ένα από τα δύο. |

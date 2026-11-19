@@ -29,13 +29,13 @@
 
 ## 📥 Έτοιμες Εκδόσεις για Λήψη (Windows 11)
 
-Τα έτοιμα εκτελέσιμα αρχεία της έκδοσης **v1.5.0** είναι διαθέσιμα στις [Κυκλοφορίες (GitHub Releases)](https://github.com/pliroforikos/myHTML/releases):
+Τα έτοιμα εκτελέσιμα αρχεία της έκδοσης **v1.5.1** είναι διαθέσιμα στις [Κυκλοφορίες (GitHub Releases)](https://github.com/pliroforikos/myHTML/releases):
 
 | Έκδοση | Αρχείο | Χαρακτηριστικά & Χρήση |
 | :--- | :--- | :--- |
-| 🚀 **Portable (Φορητή)** | **[`EduHTML Studio-Portable-1.5.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.0/EduHTML.Studio-Portable-1.5.0.exe)** | Αυτόνομο αρχείο `.exe` που εκτελείται άμεσα **χωρίς εγκατάσταση** και χωρίς δικαιώματα διαχειριστή. Ιδανικό για **USB Flash Drive** στα σχολικά εργαστήρια. |
-| 💿 **Setup (Εγκατάσταση)** | **[`EduHTML Studio-Setup-1.5.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.0/EduHTML.Studio-Setup-1.5.0.exe)** | Πλήρης εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης. |
-| 🏫 **MSI (Μαζική Εγκατάσταση)** | **[`EduHTML Studio-1.5.0.msi`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.0/EduHTML.Studio-1.5.0.msi)** | Πακέτο Windows Installer για **όλους τους χρήστες** του υπολογιστή (Program Files). Εγκαθίσταται σιωπηλά, ιδανικό για μαζική διανομή στο εργαστήριο (GPO, Intune, PDQ Deploy, σενάριο εντολών). |
+| 🚀 **Portable (Φορητή)** | **[`EduHTML Studio-Portable-1.5.1.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.1/EduHTML.Studio-Portable-1.5.1.exe)** | Αυτόνομο αρχείο `.exe` που εκτελείται άμεσα **χωρίς εγκατάσταση** και χωρίς δικαιώματα διαχειριστή. Ιδανικό για **USB Flash Drive** στα σχολικά εργαστήρια. |
+| 💿 **Setup (Εγκατάσταση)** | **[`EduHTML Studio-Setup-1.5.1.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.1/EduHTML.Studio-Setup-1.5.1.exe)** | Πλήρης εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης. |
+| 🏫 **MSI (Μαζική Εγκατάσταση)** | **[`EduHTML Studio-1.5.1.msi`](https://github.com/pliroforikos/myHTML/releases/download/v1.5.1/EduHTML.Studio-1.5.1.msi)** | Πακέτο Windows Installer για **όλους τους χρήστες** του υπολογιστή (Program Files). Εγκαθίσταται σιωπηλά, ιδανικό για μαζική διανομή στο εργαστήριο (GPO, Intune, PDQ Deploy, σενάριο εντολών). |
 
 📖 **Αναλυτικός Οδηγός Εγκατάστασης:** [`INSTALL.md`](INSTALL.md) (μεμονωμένοι υπολογιστές, μαζική εγκατάσταση, Group Policy, Intune, αναβάθμιση, απεγκατάσταση, αντιμετώπιση προβλημάτων).
 
@@ -45,13 +45,13 @@
 
 ```bat
 :: Σιωπηλή εγκατάσταση για όλους τους χρήστες
-msiexec /i "EduHTML Studio-1.5.0.msi" /qn /norestart
+msiexec /i "EduHTML Studio-1.5.1.msi" /qn /norestart
 
 :: Σιωπηλή εγκατάσταση με αρχείο καταγραφής (για διάγνωση προβλημάτων)
-msiexec /i "EduHTML Studio-1.5.0.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
+msiexec /i "EduHTML Studio-1.5.1.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
 
 :: Σιωπηλή απεγκατάσταση
-msiexec /x "EduHTML Studio-1.5.0.msi" /qn /norestart
+msiexec /x "EduHTML Studio-1.5.1.msi" /qn /norestart
 ```
 
 - **Group Policy (GPO):** Αντιγράψτε το `.msi` σε κοινόχρηστο φάκελο δικτύου και προσθέστε το στο *Computer Configuration → Policies → Software Settings → Software installation*.
@@ -158,13 +158,21 @@ npm run dist        # Setup, Portable και MSI
 npm run dist:msi    # Μόνο το MSI
 ```
 Η εντολή παράγει αυτόματα στον φάκελο `dist/`:
-- **`EduHTML Studio-Setup-1.5.0.exe`**: Κανονικός εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης.
-- **`EduHTML Studio-Portable-1.5.0.exe`**: Αυτόνομη φορητή έκδοση (Portable), ιδανική για χρήση από USB flash drive στα σχολικά εργαστήρια χωρίς ανάγκη εγκατάστασης ή δικαιωμάτων διαχειριστή.
-- **`EduHTML Studio-1.5.0.msi`**: Πακέτο Windows Installer για μαζική, σιωπηλή εγκατάσταση σε όλους τους χρήστες του υπολογιστή (το WiX Toolset κατεβαίνει αυτόματα από το electron-builder).
+- **`EduHTML Studio-Setup-1.5.1.exe`**: Κανονικός εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης.
+- **`EduHTML Studio-Portable-1.5.1.exe`**: Αυτόνομη φορητή έκδοση (Portable), ιδανική για χρήση από USB flash drive στα σχολικά εργαστήρια χωρίς ανάγκη εγκατάστασης ή δικαιωμάτων διαχειριστή.
+- **`EduHTML Studio-1.5.1.msi`**: Πακέτο Windows Installer για μαζική, σιωπηλή εγκατάσταση σε όλους τους χρήστες του υπολογιστή (το WiX Toolset κατεβαίνει αυτόματα από το electron-builder).
 
 ---
 
 ## 📝 Ιστορικό Εκδόσεων (Changelog)
+
+### 🔒 v1.5.1 (Διορθώσεις Ασφάλειας & Σταθερότητας)
+- 🔒 **Ασφάλεια προεπισκόπησης**: Ο κώδικας HTML/JavaScript της σελίδας που επεξεργάζεστε εκτελείται πλέον απομονωμένος μέσα στην προεπισκόπηση και δεν έχει πρόσβαση στις λειτουργίες της εφαρμογής (π.χ. εγγραφή αρχείων). Αφαιρέθηκε η άδεια `allow-same-origin` που είχε προστεθεί στην v1.5.0.
+- 🛡️ **Το αρχείο σας δεν τροποποιείται πια από το «Άνοιγμα στον Browser»**: Στην v1.5.0 το κουμπί αντικαθιστούσε το αποθηκευμένο αρχείο με το συνδυασμένο HTML+CSS (και έναν βοηθητικό σύνδεσμο `<base>`), ενώ για νέα αρχεία δημιουργούσε το `_preview_temp.html` μέσα στον φάκελο εργασίας. Τώρα η προβολή γίνεται από προσωρινό αρχείο του συστήματος.
+- 🔗 **Εσωτερικοί σύνδεσμοι (`<a href="#ενότητα">`)**: Λειτουργούν σωστά στην προεπισκόπηση και στον browser ακόμη και όταν το αρχείο έχει αποθηκευτεί (προηγουμένως η σελίδα «έφευγε» προς τον φάκελο).
+- 📁 **Φάκελοι με κενά, ελληνικά ή `#` στο όνομα**: Οι τοπικές εικόνες φορτώνουν σωστά (κωδικοποίηση της διαδρομής του φακέλου εργασίας).
+- 📄 **Φόρτωση προτύπου**: Η επόμενη αποθήκευση ζητά πλέον όνομα αρχείου, αντί να γράψει πάνω στο αρχείο που ήταν ανοιχτό πριν.
+- 🎨 Σωστό προεπιλεγμένο θέμα («Σκοτεινό Ανθρακί») στην πρώτη εκκίνηση και διόρθωση του μηνύματος «Έχετε την πιο πρόσφατη έκδοση».
 
 ### 🚀 v1.5.0 (Διόρθωση Τοπικών Εικόνων, Νέα Θέματα Dark/Light & Αυτόματος Έλεγχος Ενημερώσεων)
 - 📸 **Άμεση Προεπισκόπηση Τοπικών Εικόνων**: Αυτόματος εντοπισμός σχετικών διαδρομών εικόνων (`<img src="eikona.jpg">`) στον ίδιο φάκελο με το αποθηκευμένο αρχείο HTML, χωρίς σφάλματα φόρτωσης.
