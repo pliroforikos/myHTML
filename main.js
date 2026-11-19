@@ -2,8 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme, clipboard
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const https = require('https');
 const Themes = require('./src/js/themes');
+const { Updater } = require('./updater');
 
 // Στα Windows και στο Linux η κεφαλίδα της εφαρμογής (ύψος 46px, δες style.css) παίρνει τη θέση της γραμμής τίτλου.
 // Τα κουμπιά του παραθύρου (ελαχιστοποίηση, μεγιστοποίηση, κλείσιμο) τα βάζει το σύστημα πάνω δεξιά, με χρώματα που
@@ -218,6 +218,7 @@ function loadSettings() {
     saveDirectory: defaultWebpagesDir,
     browser: 'msedge', // 'msedge' | 'chrome' | 'firefox' | 'brave' | 'default'
     hideBeginnerControls: false,
+    autoUpdateCheck: true,   // έλεγχος για νέα έκδοση κατά την εκκίνηση
     theme: Themes.DEFAULT_ID, // ένα από τα θέματα του src/js/themes.js
     headerColor: 'theme',    // χρώμα κεφαλίδας: 'theme' (ίδιο με το θέμα), προκαθορισμένο ή #rrggbb
     headerColor2: '',        // δεύτερο χρώμα της διαβάθμισης· κενό = ένα χρώμα
@@ -475,120 +476,14 @@ ipcMain.on('titlebar:overlay', (event, color, symbolColor) => {
   }
 });
 
-// Βοηθητικές συναρτήσεις ελέγχου ενημερώσεων
-function parseSemver(ver) {
-  if (!ver) return [0, 0, 0];
-  const clean = ver.replace(/^v/i, '').trim();
-  const parts = clean.split('.').map(n => parseInt(n, 10) || 0);
-  while (parts.length < 3) parts.push(0);
-  return parts;
-}
-
-function isNewerVersion(currentVer, remoteVer) {
-  const c = parseSemver(currentVer);
-  const r = parseSemver(remoteVer);
-  for (let i = 0; i < 3; i++) {
-    if (r[i] > c[i]) return true;
-    if (r[i] < c[i]) return false;
-  }
-  return false;
-}
-
-function fetchJsonHttps(url) {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const req = https.get({
-      hostname: parsed.hostname,
-      path: parsed.pathname + parsed.search,
-      headers: {
-        'User-Agent': 'EduHTML-Studio-Updater',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      timeout: 8000
-    }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchJsonHttps(res.headers.location).then(resolve).catch(reject);
-      }
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        return reject(new Error(`HTTP ${res.statusCode}`));
-      }
-      let body = '';
-      res.on('data', chunk => { body += chunk; });
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(body);
-          resolve(json);
-        } catch (e) {
-          reject(e);
-        }
-      });
-    });
-    req.on('error', reject);
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error('Timeout'));
-    });
-  });
-}
-
-// Έλεγχος για νέα έκδοση στο αποθετήριο GitHub
-ipcMain.handle('app:checkForUpdates', async () => {
-  const currentVersion = getApplicationVersion();
-  try {
-    // 1. Δοκιμή ανάκτησης του τελευταίου release από το GitHub API
-    let release = null;
-    try {
-      release = await fetchJsonHttps('https://api.github.com/repos/pliroforikos/myHTML/releases/latest');
-    } catch (err) {
-      console.warn('GitHub Releases API lookup error:', err.message);
-    }
-
-    if (release && release.tag_name) {
-      const remoteVersion = release.tag_name;
-      const hasUpdate = isNewerVersion(currentVersion, remoteVersion);
-      return {
-        success: true,
-        hasUpdate: hasUpdate,
-        currentVersion: currentVersion,
-        latestVersion: remoteVersion,
-        releaseName: release.name || remoteVersion,
-        releaseNotes: release.body || '',
-        publishedAt: release.published_at || '',
-        downloadUrl: release.html_url || 'https://github.com/pliroforikos/myHTML/releases'
-      };
-    }
-
-    // 2. Εναλλακτική ανάκτηση μέσω raw package.json στο main branch
-    const remotePkg = await fetchJsonHttps('https://raw.githubusercontent.com/pliroforikos/myHTML/main/package.json');
-    if (remotePkg && remotePkg.version) {
-      const remoteVersion = remotePkg.version;
-      const hasUpdate = isNewerVersion(currentVersion, remoteVersion);
-      return {
-        success: true,
-        hasUpdate: hasUpdate,
-        currentVersion: currentVersion,
-        latestVersion: `v${remoteVersion}`,
-        releaseName: `EduHTML Studio v${remoteVersion}`,
-        releaseNotes: 'Νέα έκδοση διαθέσιμη στο αποθετήριο GitHub.',
-        publishedAt: '',
-        downloadUrl: 'https://github.com/pliroforikos/myHTML/releases'
-      };
-    }
-
-    return {
-      success: true,
-      hasUpdate: false,
-      currentVersion: currentVersion,
-      latestVersion: `v${currentVersion}`
-    };
-  } catch (err) {
-    return {
-      success: false,
-      error: err.message,
-      currentVersion: currentVersion
-    };
-  }
+// --- Ενημερώσεις από το GitHub, μέσα από την εφαρμογή (δες updater.js και updateInfo.js) ---
+const updater = new Updater({
+  owner: 'pliroforikos',
+  repo: 'myHTML',
+  getWin: () => mainWindow,
+  currentVersion: getApplicationVersion
 });
+updater.register();
 
 app.whenReady().then(() => {
   createWindow();

@@ -29,13 +29,15 @@
 
 ## 📥 Έτοιμες Εκδόσεις για Λήψη (Windows 11)
 
-Τα έτοιμα εκτελέσιμα αρχεία της έκδοσης **v1.6.0** είναι διαθέσιμα στις [Κυκλοφορίες (GitHub Releases)](https://github.com/pliroforikos/myHTML/releases):
+Τα έτοιμα εκτελέσιμα αρχεία της έκδοσης **v1.7.0** είναι διαθέσιμα στις [Κυκλοφορίες (GitHub Releases)](https://github.com/pliroforikos/myHTML/releases):
 
 | Έκδοση | Αρχείο | Χαρακτηριστικά & Χρήση |
 | :--- | :--- | :--- |
-| 🚀 **Portable (Φορητή)** | **[`EduHTML Studio-Portable-1.6.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.6.0/EduHTML.Studio-Portable-1.6.0.exe)** | Αυτόνομο αρχείο `.exe` που εκτελείται άμεσα **χωρίς εγκατάσταση** και χωρίς δικαιώματα διαχειριστή. Ιδανικό για **USB Flash Drive** στα σχολικά εργαστήρια. |
-| 💿 **Setup (Εγκατάσταση)** | **[`EduHTML Studio-Setup-1.6.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.6.0/EduHTML.Studio-Setup-1.6.0.exe)** | Πλήρης εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης. |
-| 🏫 **MSI (Μαζική Εγκατάσταση)** | **[`EduHTML Studio-1.6.0.msi`](https://github.com/pliroforikos/myHTML/releases/download/v1.6.0/EduHTML.Studio-1.6.0.msi)** | Πακέτο Windows Installer για **όλους τους χρήστες** του υπολογιστή (Program Files). Εγκαθίσταται σιωπηλά, ιδανικό για μαζική διανομή στο εργαστήριο (GPO, Intune, PDQ Deploy, σενάριο εντολών). |
+| 🚀 **Portable (Φορητή)** | **[`EduHTML.Studio-Portable-1.7.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.7.0/EduHTML.Studio-Portable-1.7.0.exe)** | Αυτόνομο αρχείο `.exe` που εκτελείται άμεσα **χωρίς εγκατάσταση** και χωρίς δικαιώματα διαχειριστή. Ιδανικό για **USB Flash Drive** στα σχολικά εργαστήρια. |
+| 💿 **Setup (Εγκατάσταση)** | **[`EduHTML.Studio-Setup-1.7.0.exe`](https://github.com/pliroforikos/myHTML/releases/download/v1.7.0/EduHTML.Studio-Setup-1.7.0.exe)** | Πλήρης εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης. |
+| 🏫 **MSI (Μαζική Εγκατάσταση)** | **[`EduHTML.Studio-1.7.0.msi`](https://github.com/pliroforikos/myHTML/releases/download/v1.7.0/EduHTML.Studio-1.7.0.msi)** | Πακέτο Windows Installer για **όλους τους χρήστες** του υπολογιστή (Program Files). Εγκαθίσταται σιωπηλά, ιδανικό για μαζική διανομή στο εργαστήριο (GPO, Intune, PDQ Deploy, σενάριο εντολών). |
+
+🔄 **Ενημέρωση μέσα από την εφαρμογή:** από την έκδοση 1.7.0 η εφαρμογή ελέγχει μόνη της για νέα έκδοση και την κατεβάζει/εγκαθιστά με ένα κλικ (Setup: αυτόματη εγκατάσταση, Portable: λήψη και εκκίνηση της νέας, MSI: σελίδα λήψης). Δες το [INSTALL.md, ενότητα 5](INSTALL.md).
 
 📖 **Αναλυτικός Οδηγός Εγκατάστασης:** [`INSTALL.md`](INSTALL.md) (μεμονωμένοι υπολογιστές, μαζική εγκατάσταση, Group Policy, Intune, αναβάθμιση, απεγκατάσταση, αντιμετώπιση προβλημάτων).
 
@@ -45,13 +47,13 @@
 
 ```bat
 :: Σιωπηλή εγκατάσταση για όλους τους χρήστες
-msiexec /i "EduHTML Studio-1.6.0.msi" /qn /norestart
+msiexec /i "EduHTML.Studio-1.7.0.msi" /qn /norestart
 
 :: Σιωπηλή εγκατάσταση με αρχείο καταγραφής (για διάγνωση προβλημάτων)
-msiexec /i "EduHTML Studio-1.6.0.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
+msiexec /i "EduHTML.Studio-1.7.0.msi" /qn /norestart /l*v "%TEMP%\eduhtml-install.log"
 
 :: Σιωπηλή απεγκατάσταση
-msiexec /x "EduHTML Studio-1.6.0.msi" /qn /norestart
+msiexec /x "EduHTML.Studio-1.7.0.msi" /qn /norestart
 ```
 
 - **Group Policy (GPO):** Αντιγράψτε το `.msi` σε κοινόχρηστο φάκελο δικτύου και προσθέστε το στο *Computer Configuration → Policies → Software Settings → Software installation*.
@@ -159,13 +161,41 @@ npm run dist        # Setup, Portable και MSI
 npm run dist:msi    # Μόνο το MSI
 ```
 Η εντολή παράγει αυτόματα στον φάκελο `dist/`:
-- **`EduHTML Studio-Setup-1.6.0.exe`**: Κανονικός εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης.
-- **`EduHTML Studio-Portable-1.6.0.exe`**: Αυτόνομη φορητή έκδοση (Portable), ιδανική για χρήση από USB flash drive στα σχολικά εργαστήρια χωρίς ανάγκη εγκατάστασης ή δικαιωμάτων διαχειριστή.
-- **`EduHTML Studio-1.6.0.msi`**: Πακέτο Windows Installer για μαζική, σιωπηλή εγκατάσταση σε όλους τους χρήστες του υπολογιστή (το WiX Toolset κατεβαίνει αυτόματα από το electron-builder).
+- **`EduHTML.Studio-Setup-1.7.0.exe`**: Κανονικός εγκαταστάτης Windows (NSIS) με δημιουργία συντομεύσεων στην Επιφάνεια Εργασίας και το Μενού Έναρξης.
+- **`EduHTML.Studio-Portable-1.7.0.exe`**: Αυτόνομη φορητή έκδοση (Portable), ιδανική για χρήση από USB flash drive στα σχολικά εργαστήρια χωρίς ανάγκη εγκατάστασης ή δικαιωμάτων διαχειριστή.
+- **`EduHTML.Studio-1.7.0.msi`**: Πακέτο Windows Installer για μαζική, σιωπηλή εγκατάσταση σε όλους τους χρήστες του υπολογιστή (το WiX Toolset κατεβαίνει αυτόματα από το electron-builder).
+
+### Δημοσίευση release (για να δουν την ενημέρωση οι εγκατεστημένες εφαρμογές)
+
+Η ενημέρωση μέσα από την εφαρμογή διαβάζει το GitHub Release της τελευταίας έκδοσης. Σε κάθε release (tag `vX.Y.Z`, ίδιο με το `version` του `package.json`, όχι draft/prerelease) ανεβάζετε από το `dist/` **και τα πέντε** αρχεία:
+
+```bash
+gh release create vX.Y.Z --title "..." --notes-file notes.md \
+  "dist/EduHTML.Studio-Setup-X.Y.Z.exe" \
+  "dist/EduHTML.Studio-Setup-X.Y.Z.exe.blockmap" \
+  "dist/EduHTML.Studio-Portable-X.Y.Z.exe" \
+  "dist/EduHTML.Studio-X.Y.Z.msi" \
+  "dist/latest.yml"
+```
+
+- Το `latest.yml` είναι αυτό που διαβάζει ο ενημερωτής (έκδοση, sha512 του Setup)· το `.blockmap` επιτρέπει διαφορική λήψη (πολύ μικρότερη).
+- Τα ονόματα των αρχείων **δεν έχουν κενά** (ορίζονται στο `package.json`, `artifactName`): το GitHub αλλάζει τα κενά σε τελείες και τότε το `latest.yml` δεν θα έδειχνε στο σωστό αρχείο.
+- Το `npm run dist` δεν ανεβάζει τίποτα (`--publish never`).
 
 ---
 
 ## 📝 Ιστορικό Εκδόσεων (Changelog)
+
+### 🔄 v1.7.0 (Ενημέρωση μέσα από την Εφαρμογή & Πιο Ανοιχτός Editor)
+- 🔄 **Ενημέρωση μέσα από την εφαρμογή**: η εφαρμογή ελέγχει μόνη της στο GitHub για νέα έκδοση, δείχνει τις αλλαγές και ειδοποίηση στη γραμμή κατάστασης, και την κατεβάζει/εγκαθιστά με ένα κλικ — χωρίς να ψάχνετε τη σελίδα λήψης.
+  - **Setup**: λήψη (διαφορική, με έλεγχο sha512), σιωπηλή εγκατάσταση και αυτόματη επανεκκίνηση, χωρίς δικαιώματα διαχειριστή.
+  - **Portable**: λήψη της νέας φορητής έκδοσης (με έλεγχο μεγέθους και sha256) δίπλα στην τρέχουσα και εκκίνησή της.
+  - **MSI**: ανοίγει η σελίδα λήψης (η εγκατάσταση χρειάζεται διαχειριστή)· κατά την εκκίνηση φαίνεται μόνο ειδοποίηση στη γραμμή κατάστασης.
+  - Πριν την επανεκκίνηση η εφαρμογή ρωτά αν υπάρχουν μη αποθηκευμένες αλλαγές. Στις Ρυθμίσεις μπορείτε να απενεργοποιήσετε τον έλεγχο κατά την εκκίνηση.
+  - Η πρώτη ενημέρωση από την 1.6.0 (ή παλαιότερη) γίνεται χειροκίνητα, γιατί οι παλιές εκδόσεις δεν έχουν το νέο σύστημα.
+- 🖥️ **Πιο ανοιχτός editor στα σκοτεινά θέματα**: το φόντο του editor στα θέματα Σκοτεινό, Dark και Islands Darcula είναι πλέον `#2b2b2b` (όπως το Darcula του Android Studio) αντί για το σχεδόν μαύρο `#1e1f22`, με πιο ανοιχτή στήλη αριθμών γραμμής.
+- 🧰 **Ονόματα αρχείων χωρίς κενά** (`EduHTML.Studio-Setup-X.exe` κ.λπ.) και νέα αρχεία στο release (`latest.yml`, `.blockmap`) που χρειάζεται η ενημέρωση.
+- 🐛 Διορθώθηκε το κουμπί «Αργότερα» στο παράθυρο ενημέρωσης, που φαινόταν κομμένο.
 
 ### 🎨 v1.6.0 (Νέο Σύστημα Θεμάτων & Χρώματος Κεφαλίδας, όπως στο myGlossa)
 - 🎨 **8 θέματα εμφάνισης**: τα προεπιλεγμένα **Φωτεινό / Σκοτεινό** και θέματα τύπου Android Studio — **Dark, Darcula, Islands Darcula, Light, IntelliJ Light, Islands Light** (τα «Islands» με στρογγυλεμένα πάνελ πάνω σε πλαίσιο). Αντικατέστησαν τα 7 θέματα της v1.5.x.

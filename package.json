@@ -1,13 +1,13 @@
 {
   "name": "edu-html-studio",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Εκπαιδευτικός HTML & CSS Editor με ενσωματωμένο Browser για ΓΕΛ και ΕΠΑΛ",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "dist:msi": "electron-builder --win msi"
+    "dist": "electron-builder --publish never",
+    "dist:msi": "electron-builder --win msi --publish never"
   },
   "keywords": [
     "html",
@@ -21,6 +21,7 @@
   "license": "CC-BY-NC-4.0",
   "dependencies": {
     "codemirror": "^5.65.21",
+    "electron-updater": "^6.8.11",
     "jszip": "^3.10.2"
   },
   "devDependencies": {
@@ -55,10 +56,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "EduHTML Studio",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "EduHTML.Studio-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "${productName}-Portable-${version}.${ext}"
+      "artifactName": "EduHTML.Studio-Portable-${version}.${ext}"
     },
     "msi": {
       "oneClick": true,
@@ -67,7 +68,12 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "EduHTML Studio",
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "EduHTML.Studio-${version}.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "pliroforikos",
+      "repo": "myHTML"
     }
   }
 }

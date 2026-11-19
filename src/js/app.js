@@ -87,6 +87,7 @@ let appSettings = {
   saveDirectory: '',
   browser: 'msedge',
   hideBeginnerControls: false,
+  autoUpdateCheck: true,  // έλεγχος για νέα έκδοση κατά την εκκίνηση
   theme: 'dark',          // ένα από τα θέματα του js/themes.js
   headerColor: 'theme',   // χρώμα κεφαλίδας: 'theme' (ίδιο με το θέμα), προκαθορισμένο ή #rrggbb
   headerColor2: '',       // δεύτερο χρώμα της διαβάθμισης· κενό = ένα χρώμα
@@ -166,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try { initGuide(); } catch (e) { console.error('Guide init:', e); }
   try { initTemplatesModal(); } catch (e) { console.error('Templates init:', e); }
   try { initSettings(); } catch (e) { console.error('Settings init:', e); }
+  try { initUpdater(); } catch (e) { console.error('Updater init:', e); }
   try { setupEventListeners(); } catch (e) { console.error('Listeners init:', e); }
   try { setupElectronMenuBridge(); } catch (e) { console.error('Menu bridge:', e); }
   try { initAppVersion(); } catch (e) { console.error('Version init:', e); }
@@ -175,13 +177,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Αθόρυβος έλεγχος ενημερώσεων στο background λίγο μετά την εκκίνηση
   setTimeout(() => {
+    if (appSettings.autoUpdateCheck === false) return;
     try { checkAppUpdates(true); } catch(e) { console.warn('Auto update check error:', e); }
   }, 3500);
 });
 
 // Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
 async function initAppVersion() {
-  let appVersion = '1.6.0';
+  let appVersion = '1.7.0';
   if (window.electronAPI && window.electronAPI.getVersion) {
     try {
       const v = await window.electronAPI.getVersion();
@@ -1206,6 +1209,8 @@ function populateSettingsUI() {
   if (browserSelect) browserSelect.value = appSettings.browser || 'msedge';
   if (folderInput) folderInput.value = appSettings.saveDirectory || '';
   if (hideCheckbox) hideCheckbox.checked = !!appSettings.hideBeginnerControls;
+  const autoUpdateCheckbox = document.getElementById('setting-auto-update-check');
+  if (autoUpdateCheckbox) autoUpdateCheckbox.checked = appSettings.autoUpdateCheck !== false;
 
   // Χρώμα κεφαλίδας: έτοιμο χρώμα, «ίδιο με το θέμα» ή ελεύθερο χρώμα (#rrggbb)
   const sel1 = document.getElementById('setting-header-select');
@@ -1255,6 +1260,8 @@ async function saveCurrentSettings() {
   appSettings.browser = browser;
   appSettings.saveDirectory = folder;
   appSettings.hideBeginnerControls = hideControls;
+  const autoUpdateCheckbox = document.getElementById('setting-auto-update-check');
+  if (autoUpdateCheckbox) appSettings.autoUpdateCheck = autoUpdateCheckbox.checked;
   appSettings.headerColor = headerColor;
   appSettings.headerColor2 = headerColor2;
   appSettings.headerDir = document.getElementById('setting-header-dir').value;
@@ -1271,69 +1278,172 @@ async function saveCurrentSettings() {
   showToast('Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς!');
 }
 
-// --- ΔΙΑΧΕΙΡΙΣΗ ΕΝΗΜΕΡΩΣΕΩΝ (IN-APP UPDATER) ---
-let latestUpdateInfo = null;
+// --- ΕΝΗΜΕΡΩΣΗ ΜΕΣΑ ΑΠΟ ΤΗΝ ΕΦΑΡΜΟΓΗ (δες updater.js) ---
+// Η κύρια διεργασία στέλνει καταστάσεις: available → downloading → ready (ή error). Το τι γίνεται κάθε φορά εξαρτάται
+// από το πώς εγκαταστάθηκε η εφαρμογή: Setup (αυτόματη εγκατάσταση), φορητή (λήψη και εκκίνηση της νέας), MSI (σελίδα λήψης).
+let updateState = { state: 'idle' };
 
-async function checkAppUpdates(silent = false) {
-  if (!window.electronAPI || !window.electronAPI.checkForUpdates) {
-    if (!silent) showToast('Η λειτουργία ενημερώσεων δεν είναι διαθέσιμη.');
-    return;
-  }
+function initUpdater() {
+  const api = window.electronAPI && window.electronAPI.update;
+  if (!api) return;
+  api.onState((s) => onUpdateState(s));
+  // Αν η κατάσταση άλλαξε πριν φορτώσει η σελίδα (π.χ. ανανέωση παραθύρου)
+  api.state().then((s) => { if (s && s.state && s.state !== 'idle') onUpdateState(s); }).catch(() => {});
+}
 
-  if (!silent) {
-    showToast('Έλεγχος για νεότερη έκδοση στο GitHub...');
-  }
+function onUpdateState(s) {
+  updateState = s;
+  // «Δεν υπάρχει νέα έκδοση» και σφάλμα ελέγχου εμφανίζονται μόνο όταν ο χρήστης ζήτησε τον έλεγχο (checkAppUpdates)
+  if (s.state === 'none' || s.state === 'idle' || (s.state === 'error' && s.phase === 'check')) return;
+  renderUpdateBadge(s);
+  renderUpdateModal(s);
+}
 
-  try {
-    const res = await window.electronAPI.checkForUpdates();
-    if (!res || !res.success) {
-      if (!silent) {
-        showToast('⚠️ Δεν ήταν δυνατή η σύνδεση για έλεγχο ενημερώσεων.');
-      }
-      return;
-    }
-
-    if (res.hasUpdate) {
-      latestUpdateInfo = res;
-      const badge = document.getElementById('status-update-badge');
-      if (badge) {
-        badge.style.display = 'inline-flex';
-        badge.textContent = `✨ Νέα έκδοση ${res.latestVersion}!`;
-      }
-
-      showUpdateModal(res);
-    } else {
-      if (!silent) {
-        showToast(`✔ Έχετε την πιο πρόσφατη έκδοση (${res.latestVersion || 'v' + res.currentVersion})!`);
-      }
-    }
-  } catch (err) {
-    console.error('Update check error:', err);
-    if (!silent) {
-      showToast('⚠️ Σφάλμα κατά τον έλεγχο ενημερώσεων.');
-    }
+// Η διακριτική ειδοποίηση στη γραμμή κατάστασης
+function renderUpdateBadge(s) {
+  const badge = document.getElementById('status-update-badge');
+  if (!badge) return;
+  badge.style.display = 'inline-flex';
+  if (s.state === 'downloading') {
+    badge.textContent = `⬇ Λήψη v${s.version}… ${s.percent || 0}%`;
+  } else if (s.state === 'ready') {
+    badge.textContent = s.kind === 'portable' ? `✅ Η v${s.version} κατέβηκε — κλικ για εκκίνηση` : `✅ Η v${s.version} είναι έτοιμη — κλικ για εγκατάσταση`;
+  } else if (s.state === 'error') {
+    badge.textContent = '⚠️ Η ενημέρωση δεν ολοκληρώθηκε';
+  } else {
+    badge.textContent = `✨ Νέα έκδοση v${s.version}!`;
   }
 }
 
-function showUpdateModal(info) {
-  const curEl = document.getElementById('update-current-version');
-  const latEl = document.getElementById('update-latest-version');
-  const notesEl = document.getElementById('update-release-notes');
-  const dlBtn = document.getElementById('btn-download-update');
-
-  if (curEl) curEl.textContent = `v${info.currentVersion}`;
-  if (latEl) latEl.textContent = info.latestVersion;
-  if (notesEl) {
-    notesEl.textContent = info.releaseNotes || 'Δεν υπάρχουν διαθέσιμες σημειώσεις έκδοσης στο αποθετήριο GitHub.';
-  }
-  if (dlBtn) {
-    dlBtn.onclick = () => {
-      openInExternalBrowser({ isUrl: true, url: info.downloadUrl });
-      closeModal('update-modal');
-    };
+// Το παράθυρο ενημέρωσης: εκδόσεις, σημειώσεις, κατάσταση λήψης και το κουμπί της ενέργειας
+function renderUpdateModal(s) {
+  const $ = (id) => document.getElementById(id);
+  const version = s.version || (updateState && updateState.version) || '';
+  if ($('update-current-version')) $('update-current-version').textContent = `v${s.current}`;
+  if ($('update-latest-version')) $('update-latest-version').textContent = version ? `v${version}` : '';
+  const notes = $('update-release-notes');
+  if (notes && s.notes !== undefined) {
+    notes.textContent = s.notes || 'Δεν υπάρχουν διαθέσιμες σημειώσεις έκδοσης στο αποθετήριο GitHub.';
   }
 
-  openModal('update-modal');
+  const kind = s.kind;
+  const statusBox = $('update-status-box');
+  const status = $('update-status');
+  const progress = $('update-progress');
+  const bar = $('update-progress-bar');
+  const action = $('btn-download-update');
+  const later = $('btn-update-later');
+  const hint = $('update-hint');
+  status.className = 'update-status';
+  statusBox.hidden = true;
+  progress.hidden = true;
+  action.disabled = false;
+  later.textContent = 'Αργότερα';
+
+  const setAction = (icon, label) => {
+    $('update-action-icon').textContent = icon;
+    $('update-action-label').textContent = label;
+  };
+
+  if (s.state === 'available') {
+    if (kind === 'setup') {
+      setAction('⬇️', 'Ενημέρωση τώρα');
+      hint.textContent = 'Η νέα έκδοση κατεβαίνει, εγκαθίσταται αυτόματα και η εφαρμογή ξεκινά ξανά.';
+    } else if (kind === 'portable') {
+      setAction('⬇️', 'Λήψη της νέας έκδοσης');
+      hint.textContent = 'Η φορητή έκδοση δεν εγκαθίσταται: η νέα έκδοση (.exe) κατεβαίνει στον φάκελο της τρέχουσας και ξεκινά από εκεί. Το παλιό αρχείο μένει και μπορείτε να το διαγράψετε.';
+    } else if (kind === 'msi') {
+      setAction('🌐', 'Σελίδα λήψης (GitHub)');
+      hint.textContent = 'Αυτή η εγκατάσταση (MSI για όλους τους χρήστες του υπολογιστή) χρειάζεται δικαιώματα διαχειριστή. Ο διαχειριστής του εργαστηρίου εγκαθιστά το νέο αρχείο .msi από τη σελίδα λήψης.';
+    } else {
+      setAction('🌐', 'Σελίδα λήψης (GitHub)');
+      hint.textContent = 'Σε αυτή τη λειτουργία δεν γίνεται αυτόματη ενημέρωση· ανοίγει η σελίδα λήψης.';
+    }
+  } else if (s.state === 'downloading') {
+    statusBox.hidden = false;
+    progress.hidden = false;
+    status.textContent = `⬇ Λήψη της έκδοσης v${version}… ${s.percent || 0}%`;
+    bar.style.width = `${s.percent || 0}%`;
+    action.disabled = true;
+    setAction('⏳', 'Γίνεται λήψη…');
+    later.textContent = 'Κλείσιμο';
+    hint.textContent = 'Μπορείτε να κλείσετε αυτό το παράθυρο· η λήψη συνεχίζεται και η πρόοδος φαίνεται στη γραμμή κατάστασης.';
+  } else if (s.state === 'ready') {
+    statusBox.hidden = false;
+    status.className = 'update-status is-ready';
+    if (kind === 'portable') {
+      status.textContent = `✅ Η έκδοση v${version} κατέβηκε${s.file ? ' (' + s.file + ')' : ''}.`;
+      setAction('▶️', 'Εκκίνηση της νέας έκδοσης');
+      hint.textContent = 'Η εφαρμογή θα κλείσει και θα ξεκινήσει η νέα έκδοση.';
+    } else {
+      status.textContent = `✅ Η έκδοση v${version} κατέβηκε και είναι έτοιμη για εγκατάσταση.`;
+      setAction('🔄', 'Επανεκκίνηση & εγκατάσταση');
+      hint.textContent = 'Η εφαρμογή θα κλείσει, θα εγκατασταθεί η ενημέρωση και θα ξεκινήσει ξανά. Αποθηκεύστε πρώτα την εργασία σας.';
+    }
+  } else if (s.state === 'error') {
+    statusBox.hidden = false;
+    status.className = 'update-status is-error';
+    status.textContent = `⚠️ Η ενημέρωση δεν ολοκληρώθηκε (${s.error || 'άγνωστο σφάλμα'}).`;
+    setAction('🌐', 'Σελίδα λήψης (GitHub)');
+    hint.textContent = 'Μπορείτε να κατεβάσετε και να εγκαταστήσετε τη νέα έκδοση χειροκίνητα από τη σελίδα λήψης.';
+  }
+}
+
+// Μη αποθηκευμένες αλλαγές στον editor (η γραμμή κατάστασης δείχνει «● Μη αποθηκευμένο»)
+function hasUnsavedChanges() {
+  const el = document.getElementById('status-save');
+  return !!el && el.textContent.includes('Μη αποθηκευμένο');
+}
+
+// Το κουμπί ενέργειας του παραθύρου ενημέρωσης, ανάλογα με την κατάσταση
+async function runUpdateAction() {
+  const api = window.electronAPI && window.electronAPI.update;
+  if (!api) return;
+  const s = updateState;
+  if (s.state === 'available') {
+    await api.download(); // Setup/φορητή: ξεκινά η λήψη· MSI/ανάπτυξη: ανοίγει η σελίδα λήψης
+  } else if (s.state === 'ready') {
+    if (hasUnsavedChanges() && !confirm('Υπάρχουν μη αποθηκευμένες αλλαγές στον editor.\nΗ εφαρμογή θα κλείσει για να ολοκληρωθεί η ενημέρωση και οι αλλαγές θα χαθούν.\n\nΝα συνεχίσω χωρίς αποθήκευση;')) {
+      return;
+    }
+    await api.install();
+  } else if (s.state === 'error' && s.url) {
+    openInExternalBrowser({ isUrl: true, url: s.url });
+  }
+}
+
+// Έλεγχος για νέα έκδοση. silent: αυτόματος έλεγχος κατά την εκκίνηση (δεν ενοχλεί αν δεν υπάρχει κάτι να δείξει)
+async function checkAppUpdates(silent = false) {
+  const api = window.electronAPI && window.electronAPI.update;
+  if (!api) {
+    if (!silent) showToast('Η λειτουργία ενημερώσεων δεν είναι διαθέσιμη.');
+    return;
+  }
+  if (!silent) showToast('Έλεγχος για νεότερη έκδοση στο GitHub...');
+
+  let s;
+  try {
+    s = await api.check(!silent);
+  } catch (err) {
+    console.error('Update check error:', err);
+    if (!silent) showToast('⚠️ Σφάλμα κατά τον έλεγχο ενημερώσεων.');
+    return;
+  }
+  if (!s) return;
+  if (s.state === 'none') {
+    if (!silent) showToast(`✔ Έχετε την πιο πρόσφατη έκδοση (v${s.current})!`);
+    return;
+  }
+  if (s.state === 'error' && s.phase === 'check') {
+    if (!silent) showToast('⚠️ Δεν ήταν δυνατή η σύνδεση για έλεγχο ενημερώσεων.');
+    return;
+  }
+  updateState = s;
+  renderUpdateBadge(s);
+  renderUpdateModal(s);
+  // Κατά την εκκίνηση το παράθυρο ανοίγει μόνο όταν η ενημέρωση γίνεται από την εφαρμογή· αλλιώς φτάνει η ειδοποίηση
+  // στη γραμμή κατάστασης (π.χ. στο MSI του εργαστηρίου, όπου οι μαθητές δεν μπορούν να ενημερώσουν)
+  if (!silent || s.canInstall) openModal('update-modal');
 }
 
 // Ρύθμιση Resizing & Event Listeners
@@ -1435,11 +1545,14 @@ function setupEventListeners() {
   if (btnCheckUpdatesAbout) {
     btnCheckUpdatesAbout.onclick = () => checkAppUpdates(false);
   }
+  const btnDownloadUpdate = document.getElementById('btn-download-update');
+  if (btnDownloadUpdate) btnDownloadUpdate.onclick = runUpdateAction;
   const statusUpdateBadge = document.getElementById('status-update-badge');
   if (statusUpdateBadge) {
     statusUpdateBadge.onclick = () => {
-      if (latestUpdateInfo) {
-        showUpdateModal(latestUpdateInfo);
+      if (updateState && ['available', 'downloading', 'ready', 'error'].includes(updateState.state)) {
+        renderUpdateModal(updateState);
+        openModal('update-modal');
       } else {
         checkAppUpdates(false);
       }
@@ -1508,7 +1621,8 @@ function setupEventListeners() {
   });
 
   // Modal Closers
-  document.querySelectorAll('.modal-close').forEach(btn => {
+  // Το ✕ της κεφαλίδας (.modal-close) και τα κουμπιά κλεισίματος στο κάτω μέρος (data-modal-close, π.χ. «Αργότερα»)
+  document.querySelectorAll('.modal-close, [data-modal-close]').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
     };

@@ -7,7 +7,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileDirect: (data) => ipcRenderer.invoke('app:saveFileDirect', data),
   openInExternalBrowser: (data) => ipcRenderer.invoke('app:openInExternalBrowser', data),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
-  checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
+  // Ενημερώσεις μέσα από την εφαρμογή (δες updater.js)
+  update: {
+    check: (manual) => ipcRenderer.invoke('update:check', manual),
+    download: () => ipcRenderer.invoke('update:download'),
+    install: () => ipcRenderer.invoke('update:install'),
+    state: () => ipcRenderer.invoke('update:state'),
+    onState: (callback) => ipcRenderer.on('update', (_event, state) => callback(state))
+  },
   
   // Settings & Folder Management
   getSettings: () => ipcRenderer.invoke('settings:get'),

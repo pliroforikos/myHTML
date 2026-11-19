@@ -257,7 +257,7 @@
   <footer class="status-bar">
     <div class="status-left">
       <div class="status-item" id="status-version">
-        <span>🌐</span> EduHTML v1.6.0
+        <span>🌐</span> EduHTML v1.7.0
       </div>
       <div class="status-item" id="status-save">
         ✔ Αποθηκευμένο
@@ -407,6 +407,10 @@
               <span>🔄</span> Έλεγχος τώρα
             </button>
           </div>
+          <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--text-main); cursor: pointer;">
+            <input type="checkbox" id="setting-auto-update-check">
+            Έλεγχος για νέες εκδόσεις κατά την εκκίνηση (απαιτεί internet)
+          </label>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border);">
@@ -431,12 +435,12 @@
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px;">
           <div>
             <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">Εγκατεστημένη Έκδοση</div>
-            <div id="update-current-version" style="font-size: 15px; font-weight: 700; color: var(--text-main);">v1.6.0</div>
+            <div id="update-current-version" style="font-size: 15px; font-weight: 700; color: var(--text-main);">v1.7.0</div>
           </div>
           <div style="font-size: 20px; color: var(--text-muted);">➜</div>
           <div>
             <div style="font-size: 11px; text-transform: uppercase; color: #10b981; font-weight: 700; letter-spacing: 0.5px;">Νέα Έκδοση</div>
-            <div id="update-latest-version" style="font-size: 16px; font-weight: 800; color: #10b981;">v1.6.0</div>
+            <div id="update-latest-version" style="font-size: 16px; font-weight: 800; color: #10b981;">v1.7.0</div>
           </div>
         </div>
 
@@ -448,10 +452,16 @@
           </div>
         </div>
 
+        <div id="update-status-box" class="update-status-box" hidden>
+          <div id="update-status" class="update-status"></div>
+          <div id="update-progress" class="update-progress" hidden><i id="update-progress-bar"></i></div>
+        </div>
+        <p id="update-hint" class="update-hint"></p>
+
         <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border);">
-          <button class="btn modal-close">Αργότερα</button>
+          <button id="btn-update-later" class="btn" data-modal-close>Αργότερα</button>
           <button id="btn-download-update" class="btn btn-primary" style="padding: 8px 18px;">
-            <span>📥</span> Λήψη Νέας Έκδοσης (GitHub)
+            <span id="update-action-icon">📥</span> <span id="update-action-label">Ενημέρωση τώρα</span>
           </button>
         </div>
       </div>
@@ -475,7 +485,7 @@
             <img src="assets/my_avatar.jpg" alt="Λέων Προκόπης" class="about-avatar-img">
           </div>
           <div class="about-creator-details">
-            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.6.0</span></div>
+            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.7.0</span></div>
             <div class="about-creator-name">Λέων Προκόπης</div>
             <div class="about-creator-role">Καθηγητής Πληροφορικής ΠΕ86</div>
             <div class="about-creator-school">2ο ΓΕΛ Ναυπλίου</div>

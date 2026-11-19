@@ -14,7 +14,7 @@ body.theme-dark {
   --bg-tertiary: #303236;
   --bg-surface: #2b2d30;
   --bg-input: #1a1b1e;
-  --bg-code: #1e1f22;
+  --bg-code: #2b2b2b;
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-active: rgba(255, 255, 255, 0.1);
   --text-main: #dfe1e5;
@@ -29,8 +29,8 @@ body.theme-dark {
   --accent: #5c9cf5;
   --on-accent: #10151c;
   /* editor: φόντο, αριθμοί γραμμών, επιλογή, κέρσορας */
-  --ed-gutter: #1e1f22;
-  --ed-lineno: #4b5059;
+  --ed-gutter: #313335;
+  --ed-lineno: #606366;
   --ed-sel: #214283;
   --ed-cursor: #ced0d6;
   /* χρώματα κώδικα */
@@ -103,7 +103,7 @@ body.theme-jb-dark {
   --bg-tertiary: #393b40;
   --bg-surface: #2b2d30;
   --bg-input: #1a1b1e;
-  --bg-code: #1e1f22;
+  --bg-code: #2b2b2b;
   --text-main: #dfe1e5;
   --text-muted: #868a91;
   --text-dim: #6c7077;
@@ -111,8 +111,8 @@ body.theme-jb-dark {
   --border-light: #4e5157;
   --accent: #548af7;
   --on-accent: #10151c;
-  --ed-gutter: #1e1f22;
-  --ed-lineno: #4b5059;
+  --ed-gutter: #313335;
+  --ed-lineno: #606366;
   --ed-sel: #214283;
   --ed-cursor: #ced0d6;
   --syn-text: #bcbec4;
@@ -175,7 +175,7 @@ body.theme-jb-islands-darcula {
   --bg-tertiary: #2f3136;
   --bg-surface: #25272b;
   --bg-input: #1a1b1e;
-  --bg-code: #1e1f22;
+  --bg-code: #2b2b2b;
   --text-main: #dfe1e5;
   --text-muted: #868a91;
   --text-dim: #6c7077;
@@ -183,8 +183,8 @@ body.theme-jb-islands-darcula {
   --border-light: #43464b;
   --accent: #548af7;
   --on-accent: #10151c;
-  --ed-gutter: #1e1f22;
-  --ed-lineno: #4b5059;
+  --ed-gutter: #313335;
+  --ed-lineno: #606366;
   --ed-sel: #214283;
   --ed-cursor: #ced0d6;
   --syn-text: #bcbec4;
@@ -2242,4 +2242,67 @@ html.custom-header .app-header {
 html.custom-header .app-header button,
 html.custom-header .app-header .mode-selector {
   -webkit-app-region: no-drag;
+}
+
+/* ==========================================================================
+   ΕΝΗΜΕΡΩΣΗ ΜΕΣΑ ΑΠΟ ΤΗΝ ΕΦΑΡΜΟΓΗ: κατάσταση, πρόοδος λήψης, υπόδειξη
+   ========================================================================== */
+.update-status-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.update-status-box[hidden],
+.update-progress[hidden] {
+  display: none;
+}
+
+.update-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.update-status.is-error {
+  color: var(--danger);
+}
+
+.update-status.is-ready {
+  color: var(--success);
+}
+
+.update-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.update-progress i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.update-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.update-hint:empty {
+  display: none;
+}
+
+#btn-download-update:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
