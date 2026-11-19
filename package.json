@@ -1,6 +1,6 @@
 {
   "name": "edu-html-studio",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Εκπαιδευτικός HTML & CSS Editor με ενσωματωμένο Browser για ΓΕΛ και ΕΠΑΛ",
   "main": "main.js",
   "scripts": {

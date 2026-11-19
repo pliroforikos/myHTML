@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  platform: process.platform,
   openFile: (filters) => ipcRenderer.invoke('dialog:openFile', filters),
   saveFile: (data) => ipcRenderer.invoke('dialog:saveFile', data),
   saveFileDirect: (data) => ipcRenderer.invoke('app:saveFileDirect', data),
@@ -22,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   toggleFullScreen: () => ipcRenderer.invoke('window:toggleFullScreen'),
   setTheme: (theme) => ipcRenderer.invoke('theme:set', theme),
+  setTitlebarOverlay: (color, symbolColor) => ipcRenderer.send('titlebar:overlay', color, symbolColor),
   
   // Listeners from native menu
   onMenuNew: (callback) => ipcRenderer.on('menu:new', callback),
@@ -35,5 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMenuToggleMode: (callback) => ipcRenderer.on('menu:toggleMode', callback),
   onMenuFormatCode: (callback) => ipcRenderer.on('menu:formatCode', callback),
   onMenuAbout: (callback) => ipcRenderer.on('menu:about', callback),
-  onMenuCheckUpdates: (callback) => ipcRenderer.on('menu:checkUpdates', callback)
+  onMenuCheckUpdates: (callback) => ipcRenderer.on('menu:checkUpdates', callback),
+  onMenuSetTheme: (callback) => ipcRenderer.on('menu:setTheme', callback),
+  onMenuToggleTheme: (callback) => ipcRenderer.on('menu:toggleTheme', callback)
 });

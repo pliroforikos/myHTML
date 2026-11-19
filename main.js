@@ -3,6 +3,14 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const https = require('https');
+const Themes = require('./src/js/themes');
+
+// Στα Windows και στο Linux η κεφαλίδα της εφαρμογής (ύψος 46px, δες style.css) παίρνει τη θέση της γραμμής τίτλου.
+// Τα κουμπιά του παραθύρου (ελαχιστοποίηση, μεγιστοποίηση, κλείσιμο) τα βάζει το σύστημα πάνω δεξιά, με χρώματα που
+// ορίζει η εφαρμογή ώστε να ταιριάζουν με το χρώμα της κεφαλίδας.
+const CUSTOM_HEADER = process.platform === 'win32' || process.platform === 'linux';
+const HEADER_HEIGHT = 46;
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 // Συγχρονισμός θέματος με τα Windows 11
 nativeTheme.themeSource = 'dark';
@@ -11,8 +19,9 @@ let mainWindow;
 
 function createWindow() {
   const settings = loadSettings();
-  const isLight = settings.theme && settings.theme.startsWith('light');
-  nativeTheme.themeSource = isLight ? 'light' : 'dark';
+  const theme = Themes.get(settings.theme);
+  nativeTheme.themeSource = theme.dark ? 'dark' : 'light';
+  const overlay = settings.headerOverlay || {};
 
   const iconPath = path.join(__dirname, 'src', 'assets', 'icon.png');
   const windowConfig = {
@@ -21,7 +30,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     title: 'EduHTML Studio - Εκπαιδευτικός HTML & CSS Editor (Windows 11)',
-    backgroundColor: isLight ? '#f8fafc' : '#0f172a',
+    backgroundColor: theme.window,
     autoHideMenuBar: true, // Απόκρυψη της γκρι γραμμής μενού των Windows για καθαρή εμφάνιση
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -37,8 +46,19 @@ function createWindow() {
     windowConfig.icon = iconPath;
   }
 
+  if (CUSTOM_HEADER) {
+    windowConfig.titleBarStyle = 'hidden';
+    windowConfig.titleBarOverlay = {
+      color: HEX_COLOR.test(overlay.color) ? overlay.color : theme.window,
+      symbolColor: HEX_COLOR.test(overlay.symbolColor) ? overlay.symbolColor : (theme.dark ? '#dfe1e5' : '#1b1c1f'),
+      height: HEADER_HEIGHT
+    };
+  }
+
   mainWindow = new BrowserWindow(windowConfig);
   mainWindow.maximize(); // Πάντα άνοιγμα σε πλήρη οθόνη (Maximized)
+  // Με τη δική μας κεφαλίδα δεν φαίνεται γραμμή μενού των Windows· οι συντομεύσεις του μενού μένουν ενεργές
+  if (CUSTOM_HEADER) mainWindow.setMenuBarVisibility(false);
 
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
 
@@ -51,6 +71,7 @@ function createWindow() {
 
 function setupMenu() {
   const isMac = process.platform === 'darwin';
+  const currentTheme = Themes.get(loadSettings().theme);
   const template = [
     {
       label: 'Αρχείο',
@@ -128,6 +149,24 @@ function setupMenu() {
           click: () => mainWindow.webContents.send('menu:toggleMode')
         },
         { type: 'separator' },
+        {
+          label: 'Θέμα εμφάνισης',
+          submenu: Themes.LIST.flatMap((t, i, all) => [
+            ...(i > 0 && all[i - 1].group !== t.group ? [{ type: 'separator' }] : []),
+            {
+              label: t.label,
+              type: 'radio',
+              checked: currentTheme.id === t.id,
+              click: () => mainWindow && mainWindow.webContents.send('menu:setTheme', t.id)
+            }
+          ])
+        },
+        {
+          label: 'Αλλαγή φωτεινό ↔ σκοτεινό',
+          accelerator: 'CmdOrCtrl+Shift+T',
+          click: () => mainWindow && mainWindow.webContents.send('menu:toggleTheme')
+        },
+        { type: 'separator' },
         { role: 'resetZoom', label: 'Επαναφορά Μεγέθυνσης' },
         { role: 'zoomIn', label: 'Μεγέθυνση (Zoom In)' },
         { role: 'zoomOut', label: 'Σμίκρυνση (Zoom Out)' },
@@ -179,13 +218,19 @@ function loadSettings() {
     saveDirectory: defaultWebpagesDir,
     browser: 'msedge', // 'msedge' | 'chrome' | 'firefox' | 'brave' | 'default'
     hideBeginnerControls: false,
-    theme: 'dark-charcoal' // 'dark' | 'dark-charcoal' | 'dark-graphite' | 'dark-steel' | 'light' | 'light-gray' | 'light-warm'
+    theme: Themes.DEFAULT_ID, // ένα από τα θέματα του src/js/themes.js
+    headerColor: 'theme',    // χρώμα κεφαλίδας: 'theme' (ίδιο με το θέμα), προκαθορισμένο ή #rrggbb
+    headerColor2: '',        // δεύτερο χρώμα της διαβάθμισης· κενό = ένα χρώμα
+    headerDir: 'right'       // κατεύθυνση της διαβάθμισης: right, left, down, diag
   };
   try {
     const sPath = getSettingsPath();
     if (fs.existsSync(sPath)) {
       const data = JSON.parse(fs.readFileSync(sPath, 'utf-8'));
-      return { ...defaults, ...data };
+      const merged = { ...defaults, ...data };
+      merged.theme = Themes.get(merged.theme).id; // παλιά ονόματα θεμάτων (dark-charcoal, light-gray…) → φωτεινό/σκοτεινό
+      for (const old of ['accent', 'lastDarkTheme', 'lastLightTheme']) delete merged[old]; // δεν χρησιμοποιούνται πια
+      return merged;
     }
   } catch (err) {
     console.error('Σφάλμα ανάγνωσης ρυθμίσεων:', err);
@@ -252,8 +297,14 @@ ipcMain.handle('settings:get', () => {
 
 ipcMain.handle('settings:save', (event, newSettings) => {
   const current = loadSettings();
-  const updated = { ...current, ...newSettings };
+  // Τα χρώματα των κουμπιών του παραθύρου τα αποθηκεύει μόνο το titlebar:overlay (η σελίδα μπορεί να στείλει παλιά τιμή)
+  const patch = { ...newSettings };
+  delete patch.headerOverlay;
+  const updated = { ...current, ...patch };
   saveSettings(updated);
+  if (newSettings && 'theme' in newSettings && mainWindow) {
+    setupMenu(); // ώστε το μενού «Θέμα εμφάνισης» να δείχνει το τρέχον θέμα
+  }
   return updated;
 });
 
@@ -407,7 +458,21 @@ ipcMain.handle('clipboard:writeText', (event, text) => {
 
 // Συγχρονισμός θέματος τίτλου Windows 11
 ipcMain.handle('theme:set', (event, theme) => {
-  nativeTheme.themeSource = (theme && theme.startsWith('light')) ? 'light' : 'dark';
+  nativeTheme.themeSource = Themes.get(theme).dark ? 'dark' : 'light';
+});
+
+// Χρώματα των κουμπιών του παραθύρου (ελαχιστοποίηση, μεγιστοποίηση, κλείσιμο) πάνω στην κεφαλίδα
+ipcMain.on('titlebar:overlay', (event, color, symbolColor) => {
+  if (!CUSTOM_HEADER || !HEX_COLOR.test(color) || !HEX_COLOR.test(symbolColor)) return;
+  const current = loadSettings();
+  saveSettings({ ...current, headerOverlay: { color, symbolColor } }); // για την επόμενη εκκίνηση, χωρίς αναλαμπή
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      mainWindow.setTitleBarOverlay({ color, symbolColor, height: HEADER_HEIGHT });
+    } catch (err) {
+      console.warn('titleBarOverlay:', err.message);
+    }
+  }
 });
 
 // Βοηθητικές συναρτήσεις ελέγχου ενημερώσεων

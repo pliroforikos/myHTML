@@ -87,20 +87,10 @@ let appSettings = {
   saveDirectory: '',
   browser: 'msedge',
   hideBeginnerControls: false,
-  accent: 'blue',
-  theme: 'dark-charcoal',
-  lastDarkTheme: 'dark-charcoal',
-  lastLightTheme: 'light-gray'
-};
-
-const THEMES = {
-  'dark-charcoal': { name: 'Σκοτεινό Ανθρακί (Ζεστές Αποχρώσεις του Γκρι)', mode: 'dark' },
-  'dark-graphite': { name: 'Σκοτεινό Γραφίτη (One Dark / Cool Gray)', mode: 'dark' },
-  'dark-steel': { name: 'Σκοτεινό Μολυβί (VS Code Classic Neutral Gray)', mode: 'dark' },
-  'dark': { name: 'Σκοτεινό Slate (Αρχική Προεπιλογή)', mode: 'dark' },
-  'light-gray': { name: 'Φωτεινό Απαλό Γκρι (Soft Gray & White)', mode: 'light' },
-  'light-warm': { name: 'Φωτεινό Ζεστό Λευκό (Warm Sand & Off-White)', mode: 'light' },
-  'light': { name: 'Φωτεινό Λευκό (Αρχική Προεπιλογή)', mode: 'light' }
+  theme: 'dark',          // ένα από τα θέματα του js/themes.js
+  headerColor: 'theme',   // χρώμα κεφαλίδας: 'theme' (ίδιο με το θέμα), προκαθορισμένο ή #rrggbb
+  headerColor2: '',       // δεύτερο χρώμα της διαβάθμισης· κενό = ένα χρώμα
+  headerDir: 'right'      // κατεύθυνση της διαβάθμισης: right, left, down, diag
 };
 
 // Παρακολούθηση τρέχοντος αποθηκευμένου/ανοιγμένου αρχείου
@@ -191,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
 async function initAppVersion() {
-  let appVersion = '1.5.1';
+  let appVersion = '1.6.0';
   if (window.electronAPI && window.electronAPI.getVersion) {
     try {
       const v = await window.electronAPI.getVersion();
@@ -249,7 +239,7 @@ function initEditor() {
 
   editor = CodeMirror.fromTextArea(editorTextarea, {
     lineNumbers: true,
-    theme: 'dracula',
+    theme: 'eduhtml',
     autoCloseTags: true,
     autoCloseBrackets: true,
     matchTags: { bothTags: true },
@@ -1050,54 +1040,130 @@ function adjustFontSize(delta) {
   showToast(`Μέγεθος γραμματοσειράς: ${currentFontSize}px`);
 }
 
-function applyTheme(themeName) {
-  if (!THEMES[themeName]) themeName = 'dark-charcoal';
-  const body = document.body;
-  body.setAttribute('data-theme', themeName);
-  
-  const isLight = themeName.startsWith('light');
-  if (editor) {
-    editor.setOption('theme', isLight ? 'eclipse' : 'dracula');
-    editor.refresh();
-  }
+// --- ΕΜΦΑΝΙΣΗ: ΘΕΜΑ ΚΑΙ ΧΡΩΜΑ ΚΕΦΑΛΙΔΑΣ (όπως στο myGlossa) ---
 
+// Εφαρμόζει ένα θέμα: κλάσεις στο <body> (τα χρώματα είναι μεταβλητές CSS), παράθυρο των Windows και κεφαλίδα
+function applyTheme(themeId) {
+  const theme = Themes.get(themeId);
+  appSettings.theme = theme.id;
+  Themes.applyToBody(document.body, theme.id);
+  if (editor) editor.refresh();
   if (window.electronAPI && window.electronAPI.setTheme) {
-    window.electronAPI.setTheme(themeName);
+    window.electronAPI.setTheme(theme.id);
   }
-
-  appSettings.theme = themeName;
+  syncAppearanceControls();
+  applyHeader();
 }
 
-function toggleTheme() {
-  const current = document.body.getAttribute('data-theme') || 'dark';
-  let nextTheme;
-  if (current.startsWith('dark')) {
-    nextTheme = (appSettings.lastLightTheme && THEMES[appSettings.lastLightTheme])
-      ? appSettings.lastLightTheme
-      : 'light-gray';
-    appSettings.lastDarkTheme = current;
+// Αλλαγή θέματος ή χρώματος κεφαλίδας: εφαρμόζεται και αποθηκεύεται αμέσως
+function updateAppearance(patch) {
+  Object.assign(appSettings, patch);
+  if ('theme' in patch) {
+    applyTheme(appSettings.theme); // εφαρμόζει και την κεφαλίδα
   } else {
-    nextTheme = (appSettings.lastDarkTheme && THEMES[appSettings.lastDarkTheme])
-      ? appSettings.lastDarkTheme
-      : 'dark-charcoal';
-    appSettings.lastLightTheme = current;
+    applyHeader();
   }
-
-  applyTheme(nextTheme);
-
   if (window.electronAPI && window.electronAPI.saveSettings) {
-    window.electronAPI.saveSettings(appSettings);
+    window.electronAPI.saveSettings(patch);
+  }
+}
+
+// Εναλλαγή φωτεινό ↔ σκοτεινό: κάθε θέμα έχει το ζεύγος του (π.χ. Darcula ↔ IntelliJ Light)
+function toggleTheme() {
+  const next = Themes.get(Themes.get(appSettings.theme).pair);
+  updateAppearance({ theme: next.id });
+  showToast(`Θέμα εμφάνισης: ${next.label}`);
+}
+
+/**
+ * Χρώμα της κεφαλίδας (γραμμή τίτλου + καρτέλες + ribbon) από τις Ρυθμίσεις: ένα χρώμα ή διαβάθμιση από το πρώτο
+ * στο δεύτερο. Χωρίς επιλογή ισχύει το χρώμα του θέματος. Ορίζει τις μεταβλητές --hdr-* και στέλνει στην κύρια
+ * διεργασία τα χρώματα των κουμπιών του παραθύρου (ελαχιστοποίηση, κλείσιμο) πάνω στη γραμμή τίτλου.
+ */
+function applyHeader() {
+  const top = document.querySelector('.app-top');
+  if (!top) return;
+  const style = document.body.style;
+  const names = ['--hdr-bg', '--hdr-fg', '--hdr-muted', '--hdr-hover', '--hdr-active', '--hdr-sep', '--hdr-menu',
+    '--hdr-image', '--hdr-accent', '--hdr-on-accent'];
+  for (const n of names) style.removeProperty(n);
+
+  const toHex = (css) => {
+    const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(css);
+    return m ? '#' + [m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('') : null;
+  };
+  const themeColor = toHex(getComputedStyle(top).backgroundColor) || '#2b2d30'; // το χρώμα του θέματος
+  const c1 = Themes.headerColorOf(appSettings.headerColor);
+  const c2 = Themes.headerColorOf(appSettings.headerColor2);
+  const dir = appSettings.headerDir;
+
+  let edge = themeColor;
+  if (c1 || c2) {
+    const s = Themes.headerStyle(c1 || themeColor, c2 || null);
+    const vars = {
+      '--hdr-bg': s.bg, '--hdr-menu': s.menu, '--hdr-fg': s.fg, '--hdr-muted': s.muted, '--hdr-hover': s.hover,
+      '--hdr-active': s.active, '--hdr-sep': s.sep, '--hdr-accent': s.fg, '--hdr-on-accent': s.onAccent
+    };
+    if (c2) vars['--hdr-image'] = Themes.headerImage(s.bg, s.bg2, dir); // s.bg2 = c2, μαλακωμένο αν δεν διαβάζονταν τα γράμματα
+    for (const [k, v] of Object.entries(vars)) style.setProperty(k, v);
+    edge = c2 ? Themes.headerEdgeColor(s.bg, s.bg2, dir) : s.bg;
   }
 
-  const themeSelect = document.getElementById('setting-theme-select');
-  if (themeSelect) themeSelect.value = nextTheme;
+  // Τα κουμπιά του παραθύρου πάνω στη γραμμή τίτλου παίρνουν το χρώμα της άκρης της κεφαλίδας
+  if (document.documentElement.classList.contains('custom-header') && window.electronAPI && window.electronAPI.setTitlebarOverlay) {
+    const fg = toHex(getComputedStyle(top).color);
+    if (edge && fg) window.electronAPI.setTitlebarOverlay(edge, fg);
+  }
+}
 
-  const displayName = THEMES[nextTheme] ? THEMES[nextTheme].name : nextTheme;
-  showToast(`Ενεργοποιήθηκε θέμα: ${displayName}`);
+// Γεμίζει τους επιλογείς θέματος (ribbon και Ρυθμίσεις) και χρώματος κεφαλίδας (Ρυθμίσεις)
+function initAppearanceControls() {
+  for (const id of ['ribbon-theme-select', 'setting-theme-select']) {
+    const sel = document.getElementById(id);
+    if (!sel) continue;
+    for (const g of Object.keys(Themes.GROUPS)) {
+      const og = document.createElement('optgroup');
+      og.label = Themes.GROUPS[g];
+      for (const t of Themes.LIST.filter((x) => x.group === g)) og.appendChild(new Option(t.label, t.id));
+      sel.appendChild(og);
+    }
+  }
+
+  const sel1 = document.getElementById('setting-header-select');
+  const color1 = document.getElementById('setting-header-color');
+  const sel2 = document.getElementById('setting-header2-select');
+  const color2 = document.getElementById('setting-header2-color');
+  const dirSel = document.getElementById('setting-header-dir');
+  const dirRow = document.getElementById('setting-header-dir-row');
+  if (!sel1 || !sel2) return;
+
+  for (const c of Themes.HEADER_COLORS) sel1.appendChild(new Option(c.label, c.id));
+  sel2.appendChild(new Option('Κανένα (ένα χρώμα)', 'none'));
+  for (const c of Themes.HEADER_COLORS) if (c.id !== 'theme') sel2.appendChild(new Option(c.label, c.id));
+  for (const d of Themes.HEADER_DIRECTIONS) dirSel.appendChild(new Option(d.label, d.id));
+
+  sel1.addEventListener('change', () => { color1.hidden = sel1.value !== 'custom'; });
+  sel2.addEventListener('change', () => {
+    color2.hidden = sel2.value !== 'custom';
+    dirRow.hidden = sel2.value === 'none';
+  });
+}
+
+// Δείχνει στους επιλογείς το τρέχον θέμα
+function syncAppearanceControls() {
+  for (const id of ['ribbon-theme-select', 'setting-theme-select']) {
+    const sel = document.getElementById(id);
+    if (sel) sel.value = Themes.get(appSettings.theme).id;
+  }
 }
 
 // --- ΔΙΑΧΕΙΡΙΣΗ ΡΥΘΜΙΣΕΩΝ (SETTINGS) ---
 async function initSettings() {
+  // Windows και Linux: η κεφαλίδα της εφαρμογής παίρνει τη θέση της γραμμής τίτλου του συστήματος
+  const platform = window.electronAPI && window.electronAPI.platform;
+  document.documentElement.classList.toggle('custom-header', platform === 'win32' || platform === 'linux');
+
+  initAppearanceControls();
   if (window.electronAPI && window.electronAPI.getSettings) {
     try {
       const fetched = await window.electronAPI.getSettings();
@@ -1106,20 +1172,10 @@ async function initSettings() {
       console.error('Σφάλμα φόρτωσης ρυθμίσεων:', err);
     }
   }
-  applyTheme(appSettings.theme || 'dark-charcoal');
+  applyTheme(appSettings.theme);
   updateBrowserButton();
   applyModeVisibility();
-  applyAccent(appSettings.accent);
   populateSettingsUI();
-}
-
-// Χρώμα έμφασης (accent) της διεπαφής
-function applyAccent(name) {
-  const accent = name || 'blue';
-  document.body.setAttribute('data-accent', accent);
-  document.querySelectorAll('.accent-swatch').forEach(s => {
-    s.classList.toggle('active', s.dataset.accent === accent);
-  });
 }
 
 function updateBrowserButton() {
@@ -1142,20 +1198,36 @@ function applyModeVisibility() {
 }
 
 function populateSettingsUI() {
-  const themeSelect = document.getElementById('setting-theme-select');
   const browserSelect = document.getElementById('setting-browser-select');
   const folderInput = document.getElementById('setting-folder-input');
   const hideCheckbox = document.getElementById('setting-hide-beginner-controls');
 
-  if (themeSelect) {
-    themeSelect.value = appSettings.theme || 'dark-charcoal';
-    themeSelect.onchange = (e) => {
-      applyTheme(e.target.value);
-    };
-  }
+  syncAppearanceControls();
   if (browserSelect) browserSelect.value = appSettings.browser || 'msedge';
   if (folderInput) folderInput.value = appSettings.saveDirectory || '';
   if (hideCheckbox) hideCheckbox.checked = !!appSettings.hideBeginnerControls;
+
+  // Χρώμα κεφαλίδας: έτοιμο χρώμα, «ίδιο με το θέμα» ή ελεύθερο χρώμα (#rrggbb)
+  const sel1 = document.getElementById('setting-header-select');
+  const color1 = document.getElementById('setting-header-color');
+  const sel2 = document.getElementById('setting-header2-select');
+  const color2 = document.getElementById('setting-header2-color');
+  const dirSel = document.getElementById('setting-header-dir');
+  const dirRow = document.getElementById('setting-header-dir-row');
+  if (!sel1 || !sel2) return;
+
+  const fill = (sel, colorInput, value, none) => {
+    const hex = Themes.headerColorOf(value);
+    const preset = Themes.HEADER_COLORS.find((c) => c.id === value);
+    const isCustom = !!hex && !preset;
+    sel.value = isCustom ? 'custom' : (preset && preset.id !== 'custom' ? preset.id : none);
+    if (hex) colorInput.value = hex;
+    colorInput.hidden = sel.value !== 'custom';
+  };
+  fill(sel1, color1, appSettings.headerColor, 'theme');
+  fill(sel2, color2, appSettings.headerColor2, 'none');
+  dirSel.value = Themes.HEADER_DIRECTIONS.some((d) => d.id === appSettings.headerDir) ? appSettings.headerDir : 'right';
+  dirRow.hidden = sel2.value === 'none';
 }
 
 async function browseFolder() {
@@ -1168,17 +1240,26 @@ async function browseFolder() {
 }
 
 async function saveCurrentSettings() {
-  const theme = document.getElementById('setting-theme-select') ? document.getElementById('setting-theme-select').value : (appSettings.theme || 'dark-charcoal');
+  const theme = document.getElementById('setting-theme-select').value;
   const browser = document.getElementById('setting-browser-select').value;
   const folder = document.getElementById('setting-folder-input').value;
   const hideControls = document.getElementById('setting-hide-beginner-controls').checked;
+
+  const sel1 = document.getElementById('setting-header-select');
+  const sel2 = document.getElementById('setting-header2-select');
+  const headerColor = sel1.value === 'custom' ? document.getElementById('setting-header-color').value : sel1.value;
+  const headerColor2 = sel2.value === 'none' ? ''
+    : (sel2.value === 'custom' ? document.getElementById('setting-header2-color').value : sel2.value);
 
   appSettings.theme = theme;
   appSettings.browser = browser;
   appSettings.saveDirectory = folder;
   appSettings.hideBeginnerControls = hideControls;
+  appSettings.headerColor = headerColor;
+  appSettings.headerColor2 = headerColor2;
+  appSettings.headerDir = document.getElementById('setting-header-dir').value;
 
-  applyTheme(theme);
+  applyTheme(theme); // εφαρμόζει και το χρώμα της κεφαλίδας
 
   if (window.electronAPI && window.electronAPI.saveSettings) {
     await window.electronAPI.saveSettings(appSettings);
@@ -1319,16 +1400,20 @@ function setupEventListeners() {
     };
   }
 
-  // Επιλογή χρώματος έμφασης (αποθηκεύεται στις ρυθμίσεις)
-  document.querySelectorAll('.accent-swatch').forEach(swatch => {
-    swatch.onclick = () => {
-      appSettings.accent = swatch.dataset.accent;
-      applyAccent(appSettings.accent);
-      if (window.electronAPI && window.electronAPI.saveSettings) {
-        window.electronAPI.saveSettings({ accent: appSettings.accent });
-      }
+  // Θέμα εμφάνισης από το ribbon (εφαρμόζεται και αποθηκεύεται αμέσως)
+  const ribbonTheme = document.getElementById('ribbon-theme-select');
+  if (ribbonTheme) {
+    ribbonTheme.onchange = (e) => updateAppearance({ theme: e.target.value });
+  }
+
+  // Χρώμα κεφαλίδας και διαβάθμιση: ρυθμίζονται στο παράθυρο Ρυθμίσεων
+  const btnHeaderColor = document.getElementById('btn-header-color');
+  if (btnHeaderColor) {
+    btnHeaderColor.onclick = () => {
+      populateSettingsUI();
+      openModal('settings-modal');
     };
-  });
+  }
 
   // Ribbon tabs (Κεντρικό / Εργασία / Εμφάνιση / Ρυθμίσεις & Βοήθεια)
   document.querySelectorAll('.ribbon-tab').forEach(tab => {
@@ -1560,6 +1645,12 @@ function setupElectronMenuBridge() {
   window.electronAPI.onMenuAbout(() => openModal('about-modal'));
   if (window.electronAPI.onMenuCheckUpdates) {
     window.electronAPI.onMenuCheckUpdates(() => checkAppUpdates(false));
+  }
+  if (window.electronAPI.onMenuSetTheme) {
+    window.electronAPI.onMenuSetTheme((_event, id) => updateAppearance({ theme: id }));
+  }
+  if (window.electronAPI.onMenuToggleTheme) {
+    window.electronAPI.onMenuToggleTheme(() => toggleTheme());
   }
 }
 
