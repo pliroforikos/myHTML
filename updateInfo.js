@@ -55,13 +55,17 @@ function releaseNotesToText(body) {
     } else {
       line = line.replace(/^(\s*)[-*+]\s+/, '$1• ').replace(/^\s*>\s?/, '');
     }
+    // Τα τμήματα κώδικα (`…`) προστατεύονται: μέσα τους μένουν ως έχουν ετικέτες HTML όπως το <img src="">
+    // (η εφαρμογή διδάσκει HTML, οπότε οι σημειώσεις τις αναφέρουν συχνά), και βγαίνουν χωρίς τα backticks.
+    const codeSpans = [];
     line = line
+      .replace(/`([^`]+)`/g, (_, code) => `\u0000${codeSpans.push(code) - 1}\u0000`)
       .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
       .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
       .replace(/<\/?[a-z][^>]*>/gi, '')
       .replace(/\*\*([^*]+)\*\*/g, '$1')
       .replace(/__([^_]+)__/g, '$1')
-      .replace(/`([^`]+)`/g, '$1');
+      .replace(/\u0000(\d+)\u0000/g, (_, i) => codeSpans[Number(i)]);
     if (line === '' && (out.length === 0 || out[out.length - 1] === '')) continue;
     out.push(line);
   }
