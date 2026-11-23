@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
 async function initAppVersion() {
-  let appVersion = '1.7.0';
+  let appVersion = '1.8.0';
   if (window.electronAPI && window.electronAPI.getVersion) {
     try {
       const v = await window.electronAPI.getVersion();
@@ -331,9 +331,16 @@ function triggerAutocomplete(cm) {
   }
 }
 
-function onCodeChanged() {
+// Δείχνει αν υπάρχουν μη αποθηκευμένες αλλαγές: γραμμή κατάστασης και γρήγορο κουμπί αποθήκευσης στη μπάρα του editor
+function setSavedState(saved) {
   const saveEl = document.getElementById('status-save');
-  if (saveEl) saveEl.textContent = '● Μη αποθηκευμένο';
+  if (saveEl) saveEl.textContent = saved ? '✔ Αποθηκευμένο' : '● Μη αποθηκευμένο';
+  const quickSave = document.getElementById('btn-quick-save');
+  if (quickSave) quickSave.classList.toggle('is-dirty', !saved);
+}
+
+function onCodeChanged() {
+  setSavedState(false);
   
   if (autoRefresh) {
     if (refreshTimer) clearTimeout(refreshTimer);
@@ -611,6 +618,7 @@ function renderGuideItems(filteredItems = GUIDE_ITEMS) {
         <button class="btn-insert" data-target="${item.target}">
           <span>↵</span> Εισαγωγή στον Editor
         </button>
+        ${item.pickFile === 'image' ? '<button class="btn-insert btn-insert-file"><span>🖼️</span> Εικόνα από αρχείο…</button>' : ''}
       </div>
     `;
 
@@ -618,6 +626,8 @@ function renderGuideItems(filteredItems = GUIDE_ITEMS) {
     insertBtn.onclick = () => {
       insertCodeToEditor(item.insertCode, item.target);
     };
+    const insertFileBtn = card.querySelector('.btn-insert-file');
+    if (insertFileBtn) insertFileBtn.onclick = insertImageFromFile;
 
     container.appendChild(card);
   });
@@ -659,6 +669,61 @@ function insertCodeToEditor(code, targetDocType) {
   editor.replaceSelection(code);
   editor.focus();
   showToast('Ο κώδικας εισήχθη επιτυχώς!');
+}
+
+// --- ΕΙΣΑΓΩΓΗ ΕΙΚΟΝΑΣ (<img src="">) ---
+// Ο χρήστης επιλέγει το αρχείο από τον διάλογο των Windows και η διαδρομή μπαίνει μέσα στα "" του src (δες imagePath.js):
+// ίδιος φάκελος με τη σελίδα → μόνο το όνομα, υποφάκελος → σχετική διαδρομή (images/foto.jpg), αλλού → ολόκληρη η διαδρομή.
+// Αν ο κέρσορας είναι μέσα σε ένα <img>, συμπληρώνεται το src του· αλλιώς μπαίνει ολόκληρη η ετικέτα (δες image-insert.js).
+async function insertImageFromFile() {
+  if (window.electronAPI && window.electronAPI.pickImage) {
+    let picked;
+    try {
+      picked = await window.electronAPI.pickImage(getCurrentWorkingDir());
+    } catch (err) {
+      console.error('Image picker error:', err);
+      showToast('Δεν ήταν δυνατή η επιλογή εικόνας.');
+      return;
+    }
+    if (picked) applyImageSrc(picked.src, picked.where);
+    return;
+  }
+
+  // Εκτός Electron ο browser δίνει μόνο το όνομα του αρχείου
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if (file) applyImageSrc(file.name, 'same');
+  };
+  input.click();
+}
+
+function applyImageSrc(src, where) {
+  // Η εικόνα μπαίνει πάντα στο HTML, όχι στο CSS
+  if (currentMode === 'advanced' && activeTab !== 'html') switchTab('html');
+
+  const text = htmlDoc.getValue();
+  const plan = ImageInsert.planImageInsert(
+    text,
+    htmlDoc.indexFromPos(htmlDoc.getCursor('from')),
+    htmlDoc.indexFromPos(htmlDoc.getCursor('to')),
+    src
+  );
+  htmlDoc.replaceRange(plan.insert, htmlDoc.posFromIndex(plan.from), htmlDoc.posFromIndex(plan.to));
+  const cursor = htmlDoc.posFromIndex(plan.cursor);
+  htmlDoc.setCursor(cursor);
+  editor.scrollIntoView(cursor, 80);
+  editor.focus();
+
+  if (where === 'outside') {
+    showToast('Η εικόνα είναι εκτός του φακέλου της σελίδας, οπότε κρατήθηκε ολόκληρη η διαδρομή. Για να φαίνεται και σε άλλον υπολογιστή, αντιγράψτε την στον φάκελο της σελίδας.', 6500);
+  } else if (where === 'sub') {
+    showToast(`Εισήχθη η εικόνα με σχετική διαδρομή «${src}».`, 4000);
+  } else {
+    showToast(`Εισήχθη η εικόνα «${src}» (ίδιος φάκελος με τη σελίδα).`);
+  }
 }
 
 // Έγκυρες πρότυπες ετικέτες HTML5 (για ανίχνευση ορθογραφικών λαθών)
@@ -893,7 +958,7 @@ async function saveCurrentFile(isSaveAs = false) {
       });
 
       if (resDirect.success) {
-        document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
+        setSavedState(true);
         showToast('Το αρχείο αποθηκεύτηκε επιτυχώς!');
         updateLivePreview();
         return;
@@ -914,7 +979,7 @@ async function saveCurrentFile(isSaveAs = false) {
         } else {
           currentCssFilePath = res.filePath;
         }
-        document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
+        setSavedState(true);
         showToast(`Το αρχείο αποθηκεύτηκε επιτυχώς!`);
         updateLivePreview();
       }
@@ -928,7 +993,7 @@ async function saveCurrentFile(isSaveAs = false) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
+    setSavedState(true);
     showToast(`Το αρχείο λήφθηκε επιτυχώς!`);
   }
 }
@@ -948,7 +1013,7 @@ async function openFile() {
         currentHtmlFilePath = res.filePath;
         switchTab('html');
       }
-      document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
+      setSavedState(true);
       updateLivePreview();
       validateHtmlCode();
       showToast(`Ανοίχθηκε το αρχείο: ${res.filePath}`);
@@ -972,7 +1037,7 @@ async function openFile() {
             currentHtmlFilePath = file.name;
             switchTab('html');
           }
-          document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
+          setSavedState(true);
           updateLivePreview();
           validateHtmlCode();
           showToast(`Ανοίχθηκε: ${file.name}`);
@@ -993,7 +1058,7 @@ function createNewFile() {
     if (currentMode === 'advanced') {
       cssDoc.setValue('/* style.css */\n');
     }
-    document.getElementById('status-save').textContent = '✔ Αποθηκευμένο';
+    setSavedState(true);
     updateLivePreview();
     validateHtmlCode();
     showToast('Δημιουργήθηκε νέο κενό έγγραφο.');
@@ -1460,6 +1525,10 @@ function setupEventListeners() {
   document.getElementById('btn-new').onclick = createNewFile;
   document.getElementById('btn-open').onclick = openFile;
   document.getElementById('btn-save').onclick = () => saveCurrentFile(false);
+  document.getElementById('btn-save-as').onclick = () => saveCurrentFile(true);
+  document.getElementById('btn-quick-save').onclick = () => saveCurrentFile(false);
+  document.getElementById('btn-insert-image').onclick = insertImageFromFile;
+  document.getElementById('btn-quick-image').onclick = insertImageFromFile;
   document.getElementById('btn-export-zip').onclick = exportZip;
   document.getElementById('btn-format').onclick = formatCode;
   document.getElementById('btn-templates').onclick = () => openModal('templates-modal');
@@ -1723,13 +1792,15 @@ function closeModal(id) {
   if (modal) modal.classList.remove('active');
 }
 
-function showToast(msg) {
+let toastTimer = null;
+function showToast(msg, durationMs = 2800) {
   const toast = document.getElementById('toast');
   toast.textContent = msg;
   toast.classList.add('show');
-  setTimeout(() => {
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
     toast.classList.remove('show');
-  }, 2800);
+  }, durationMs);
 }
 
 function escapeHtml(str) {
@@ -1759,6 +1830,9 @@ function setupElectronMenuBridge() {
   window.electronAPI.onMenuAbout(() => openModal('about-modal'));
   if (window.electronAPI.onMenuCheckUpdates) {
     window.electronAPI.onMenuCheckUpdates(() => checkAppUpdates(false));
+  }
+  if (window.electronAPI.onMenuInsertImage) {
+    window.electronAPI.onMenuInsertImage(() => insertImageFromFile());
   }
   if (window.electronAPI.onMenuSetTheme) {
     window.electronAPI.onMenuSetTheme((_event, id) => updateAppearance({ theme: id }));
@@ -1984,6 +2058,13 @@ async function handleEditorContextMenu(cm, e) {
         cm.focus();
         triggerAutocomplete(cm);
       }
+    },
+    {
+      id: 'insertImage',
+      icon: '🖼️',
+      label: 'Εισαγωγή εικόνας από αρχείο…',
+      shortcut: 'Ctrl+Shift+P',
+      action: () => insertImageFromFile()
     },
     { type: 'separator' },
     {

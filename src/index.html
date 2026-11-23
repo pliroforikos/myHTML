@@ -68,6 +68,9 @@
         <button id="btn-save" class="btn" title="Αποθήκευση (Ctrl+S)">
           <span>💾</span> Αποθήκευση
         </button>
+        <button id="btn-save-as" class="btn" title="Αποθήκευση ως… με νέο όνομα ή σε άλλον φάκελο (Ctrl+Shift+S)">
+          <span>📝</span> Αποθήκευση ως
+        </button>
       </div>
       <div class="ribbon-group">
         <span class="ribbon-group-label">Εκτέλεση</span>
@@ -82,6 +85,12 @@
         </button>
         <button id="btn-format" class="btn" title="Αυτόματη στοίχιση κώδικα (Shift+Alt+F)">
           <span>✨</span> Μορφοποίηση
+        </button>
+      </div>
+      <div class="ribbon-group">
+        <span class="ribbon-group-label">Εισαγωγή</span>
+        <button id="btn-insert-image" class="btn" title="Εισαγωγή εικόνας: επιλέγετε αρχείο και η διαδρομή μπαίνει στο src=&quot;&quot; του &lt;img&gt; (Ctrl+Shift+P)">
+          <span>🖼️</span> Εικόνα
         </button>
       </div>
     </div>
@@ -202,7 +211,9 @@
           </div>
         </div>
         <div class="editor-tools">
-          <span style="font-size: 11px; color: var(--text-dim);">Αυτόματη συμπλήρωση &amp; κλείσιμο ετικετών ενεργό</span>
+          <button id="btn-quick-image" class="editor-tool-btn" title="Εισαγωγή εικόνας: επιλέγετε αρχείο και η διαδρομή μπαίνει στο src=&quot;&quot; του &lt;img&gt; (Ctrl+Shift+P)">Εικόνα</button>
+          <button id="btn-quick-save" class="editor-tool-btn" title="Αποθήκευση (Ctrl+S)">Αποθήκευση</button>
+          <span class="editor-hint">Αυτόματη συμπλήρωση &amp; κλείσιμο ετικετών ενεργό</span>
         </div>
       </div>
 
@@ -257,7 +268,7 @@
   <footer class="status-bar">
     <div class="status-left">
       <div class="status-item" id="status-version">
-        <span>🌐</span> EduHTML v1.7.0
+        <span>🌐</span> EduHTML v1.8.0
       </div>
       <div class="status-item" id="status-save">
         ✔ Αποθηκευμένο
@@ -435,12 +446,12 @@
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px;">
           <div>
             <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">Εγκατεστημένη Έκδοση</div>
-            <div id="update-current-version" style="font-size: 15px; font-weight: 700; color: var(--text-main);">v1.7.0</div>
+            <div id="update-current-version" style="font-size: 15px; font-weight: 700; color: var(--text-main);">v1.8.0</div>
           </div>
           <div style="font-size: 20px; color: var(--text-muted);">➜</div>
           <div>
             <div style="font-size: 11px; text-transform: uppercase; color: #10b981; font-weight: 700; letter-spacing: 0.5px;">Νέα Έκδοση</div>
-            <div id="update-latest-version" style="font-size: 16px; font-weight: 800; color: #10b981;">v1.7.0</div>
+            <div id="update-latest-version" style="font-size: 16px; font-weight: 800; color: #10b981;">v1.8.0</div>
           </div>
         </div>
 
@@ -485,7 +496,7 @@
             <img src="assets/my_avatar.jpg" alt="Λέων Προκόπης" class="about-avatar-img">
           </div>
           <div class="about-creator-details">
-            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.7.0</span></div>
+            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.8.0</span></div>
             <div class="about-creator-name">Λέων Προκόπης</div>
             <div class="about-creator-role">Καθηγητής Πληροφορικής ΠΕ86</div>
             <div class="about-creator-school">2ο ΓΕΛ Ναυπλίου</div>
@@ -557,6 +568,8 @@
               <div><kbd>Ctrl + G</kbd> <span>Εμφάνιση / Απόκρυψη Οδηγού</span></div>
               <div><kbd>Ctrl + M</kbd> <span>Εναλλαγή Mode (Αρχάριος/Προχωρημένος)</span></div>
               <div><kbd>Ctrl + Shift + T</kbd> <span>Εναλλαγή φωτεινού / σκοτεινού θέματος</span></div>
+              <div><kbd>Ctrl + Shift + S</kbd> <span>Αποθήκευση ως…</span></div>
+              <div><kbd>Ctrl + Shift + P</kbd> <span>Εισαγωγή εικόνας (&lt;img src&gt;)</span></div>
               <div><kbd>Ctrl + Space</kbd> <span>Προτάσεις Εντολών (Autocomplete)</span></div>
               <div><kbd>Shift+Alt+F</kbd> <span>Αυτόματη Μορφοποίηση Κώδικα</span></div>
               <div><kbd>F5</kbd> <span>Ανανέωση προεπισκόπησης</span></div>
@@ -635,6 +648,7 @@
 
   <!-- Educational Data & Main App -->
   <script src="js/themes.js"></script>
+  <script src="js/image-insert.js"></script>
   <script src="js/guide-data.js"></script>
   <script src="js/templates-data.js"></script>
   <script src="js/app.js"></script>

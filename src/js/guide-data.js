@@ -195,7 +195,8 @@ const GUIDE_ITEMS = [
     description: 'Εμφανίζει εικόνα. Το src είναι η διαδρομή/URL του αρχείου και το alt είναι η περιγραφή για προσβασιμότητα και αν αποτύχει η φόρτωση.',
     syntax: '<img src="diadromi/eikona.jpg" alt="Περιγραφή εικόνας" width="300">',
     example: '<img src="https://picsum.photos/400/250" alt="Τυχαία όμορφη φωτογραφία" width="400">',
-    insertCode: '<img src="https://picsum.photos/400/250" alt="Περιγραφή εικόνας" width="400">\n'
+    insertCode: '<img src="https://picsum.photos/400/250" alt="Περιγραφή εικόνας" width="400">\n',
+    pickFile: 'image' // επιπλέον κουμπί «Εικόνα από αρχείο…»: ο χρήστης διαλέγει το αρχείο και η διαδρομή μπαίνει στο src
   },
   {
     category: 'links_media',

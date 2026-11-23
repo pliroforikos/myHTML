@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const Themes = require('./src/js/themes');
 const { Updater } = require('./updater');
+const { computeImageSrc } = require('./imagePath');
 
 // Στα Windows και στο Linux η κεφαλίδα της εφαρμογής (ύψος 46px, δες style.css) παίρνει τη θέση της γραμμής τίτλου.
 // Τα κουμπιά του παραθύρου (ελαχιστοποίηση, μεγιστοποίηση, κλείσιμο) τα βάζει το σύστημα πάνω δεξιά, με χρώματα που
@@ -121,6 +122,11 @@ function setupMenu() {
           label: 'Μορφοποίηση Κώδικα (Beautify)',
           accelerator: 'Shift+Alt+F',
           click: () => mainWindow.webContents.send('menu:formatCode')
+        },
+        {
+          label: 'Εισαγωγή εικόνας...',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => mainWindow.webContents.send('menu:insertImage')
         }
       ]
     },
@@ -273,6 +279,28 @@ ipcMain.handle('dialog:openFile', async (event, filters) => {
     return { filePath, content };
   }
   return null;
+});
+
+// Επιλογή εικόνας για το <img src="">. baseDir: ο φάκελος της σελίδας (ή ο φάκελος εργασίας αν δεν έχει αποθηκευτεί).
+ipcMain.handle('dialog:pickImage', async (event, baseDir) => {
+  const settings = loadSettings();
+  const startDir = (baseDir && fs.existsSync(baseDir))
+    ? baseDir
+    : ((settings.saveDirectory && fs.existsSync(settings.saveDirectory)) ? settings.saveDirectory : defaultWebpagesDir);
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Επιλογή εικόνας',
+    defaultPath: startDir,
+    properties: ['openFile'],
+    filters: [
+      { name: 'Εικόνες', extensions: ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico', 'avif'] },
+      { name: 'Όλα τα αρχεία', extensions: ['*'] }
+    ]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return null;
+  const filePath = result.filePaths[0];
+  return { filePath, ...computeImageSrc(baseDir || '', filePath) };
 });
 
 function getApplicationVersion() {

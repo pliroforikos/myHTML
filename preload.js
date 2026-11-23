@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: (filters) => ipcRenderer.invoke('dialog:openFile', filters),
   saveFile: (data) => ipcRenderer.invoke('dialog:saveFile', data),
   saveFileDirect: (data) => ipcRenderer.invoke('app:saveFileDirect', data),
+  pickImage: (baseDir) => ipcRenderer.invoke('dialog:pickImage', baseDir),
   openInExternalBrowser: (data) => ipcRenderer.invoke('app:openInExternalBrowser', data),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   // Ενημερώσεις μέσα από την εφαρμογή (δες updater.js)
@@ -45,6 +46,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMenuFormatCode: (callback) => ipcRenderer.on('menu:formatCode', callback),
   onMenuAbout: (callback) => ipcRenderer.on('menu:about', callback),
   onMenuCheckUpdates: (callback) => ipcRenderer.on('menu:checkUpdates', callback),
+  onMenuInsertImage: (callback) => ipcRenderer.on('menu:insertImage', callback),
   onMenuSetTheme: (callback) => ipcRenderer.on('menu:setTheme', callback),
   onMenuToggleTheme: (callback) => ipcRenderer.on('menu:toggleTheme', callback)
 });
