@@ -202,17 +202,8 @@
     <!-- CENTER PANEL: EDITOR -->
     <section class="editor-panel">
       <div class="tabs-bar">
-        <div id="tabs-group" class="tabs-group">
-          <div id="tab-html" class="tab active">
-            <span class="tab-icon">🟧</span> index.html
-          </div>
-          <div id="tab-css" class="tab" style="display: none;">
-            <span class="tab-icon">🟦</span> style.css
-          </div>
-        </div>
+        <div id="tabs-group" class="tabs-group" role="tablist" aria-label="Ανοιχτά αρχεία"></div>
         <div class="editor-tools">
-          <button id="btn-quick-image" class="editor-tool-btn" title="Εισαγωγή εικόνας: επιλέγετε αρχείο και η διαδρομή μπαίνει στο src=&quot;&quot; του &lt;img&gt; (Ctrl+Shift+P)">Εικόνα</button>
-          <button id="btn-quick-save" class="editor-tool-btn" title="Αποθήκευση (Ctrl+S)">Αποθήκευση</button>
           <span class="editor-hint">Αυτόματη συμπλήρωση &amp; κλείσιμο ετικετών ενεργό</span>
         </div>
       </div>
@@ -229,6 +220,9 @@
         <div class="validation-tip" id="validation-tip">
           Ο κώδικάς σας είναι έτοιμος.
         </div>
+        <button id="btn-fix-css-link" class="validation-fix" type="button" hidden title="Προσθέτει τη γραμμή &lt;link rel=&quot;stylesheet&quot; href=&quot;style.css&quot;&gt; μέσα στο &lt;head&gt;">
+          Σύνδεση με CSS
+        </button>
       </div>
     </section>
 
@@ -244,8 +238,8 @@
           </button>
         </div>
         <div class="address-bar">
-          <span class="address-icon">🔒</span>
-          <span>http://localhost:3000/preview.html</span>
+          <span class="address-icon">📄</span>
+          <span id="preview-address" class="address-text">Νέο αρχείο (δεν έχει αποθηκευτεί ακόμα)</span>
         </div>
         <div class="device-switcher">
           <button id="btn-device-desktop" class="device-btn active" title="Προβολή Desktop">🖥️</button>
@@ -268,7 +262,7 @@
   <footer class="status-bar">
     <div class="status-left">
       <div class="status-item" id="status-version">
-        <span>🌐</span> EduHTML v1.8.0
+        <span>🌐</span> EduHTML v1.9.0
       </div>
       <div class="status-item" id="status-save">
         ✔ Αποθηκευμένο
@@ -398,7 +392,7 @@
           </label>
           <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-main); line-height: 1.4;">
             <input type="checkbox" id="setting-hide-beginner-controls" style="margin-top: 2px; width: 16px; height: 16px; cursor: pointer;">
-            <span>Απόκρυψη των κουμπιών [Αρχάριος/Προχωρημένος] και [Πρότυπα] όταν είναι ενεργή η λειτουργία «Αρχάριος» (για απλούστευση της οθόνης)</span>
+            <span>Απόκρυψη των κουμπιών [Αρχάριος/Προχωρημένος] και [Πρότυπα]· η εφαρμογή μένει στη λειτουργία «Αρχάριος» (για απλούστευση της οθόνης). Ισχύει αμέσως.</span>
           </label>
           <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 5px; padding-left: 24px;">
             Ιδανικό για τα πρώτα μαθήματα στην Α' Λυκείου ώστε οι μαθητές να επικεντρώνονται μόνο στη συγγραφή.
@@ -446,12 +440,12 @@
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px;">
           <div>
             <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">Εγκατεστημένη Έκδοση</div>
-            <div id="update-current-version" style="font-size: 15px; font-weight: 700; color: var(--text-main);">v1.8.0</div>
+            <div id="update-current-version" style="font-size: 15px; font-weight: 700; color: var(--text-main);">v1.9.0</div>
           </div>
           <div style="font-size: 20px; color: var(--text-muted);">➜</div>
           <div>
             <div style="font-size: 11px; text-transform: uppercase; color: #10b981; font-weight: 700; letter-spacing: 0.5px;">Νέα Έκδοση</div>
-            <div id="update-latest-version" style="font-size: 16px; font-weight: 800; color: #10b981;">v1.8.0</div>
+            <div id="update-latest-version" style="font-size: 16px; font-weight: 800; color: #10b981;">v1.9.0</div>
           </div>
         </div>
 
@@ -479,6 +473,55 @@
     </div>
   </div>
 
+  <!-- ZIP MODAL: τι θα μπει στο ZIP -->
+  <div id="zip-modal" class="modal-overlay">
+    <div class="modal-window" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📦</span> Εξαγωγή σε ZIP
+        </div>
+        <button class="modal-close">✕</button>
+      </div>
+      <div class="modal-body" style="gap: 12px;">
+        <p class="zip-intro">Τι θα μπει στο αρχείο ZIP; Τα αρχεία που δεν έχουν αποθηκευτεί δεν συμπεριλαμβάνονται.</p>
+
+        <label class="zip-option" id="zip-option-current">
+          <input type="radio" name="zip-mode" value="current">
+          <span class="zip-option-text">
+            <span class="zip-option-title">Το τρέχον αρχείο</span>
+            <span class="zip-option-desc" id="zip-desc-current"></span>
+          </span>
+        </label>
+        <label class="zip-option" id="zip-option-tabs">
+          <input type="radio" name="zip-mode" value="tabs">
+          <span class="zip-option-text">
+            <span class="zip-option-title">Όλα τα ανοιχτά αρχεία</span>
+            <span class="zip-option-desc" id="zip-desc-tabs"></span>
+          </span>
+        </label>
+        <label class="zip-option" id="zip-option-folder">
+          <input type="radio" name="zip-mode" value="folder">
+          <span class="zip-option-text">
+            <span class="zip-option-title">Ολόκληρος ο φάκελος της εργασίας</span>
+            <span class="zip-option-desc" id="zip-desc-folder"></span>
+          </span>
+        </label>
+
+        <label class="zip-save-first" id="zip-save-first-row" hidden>
+          <input type="checkbox" id="zip-save-first" checked>
+          <span id="zip-save-first-text">Αποθήκευση των αλλαγών πριν τη δημιουργία του ZIP</span>
+        </label>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border);">
+          <button class="btn" data-modal-close>Άκυρο</button>
+          <button id="btn-zip-create" class="btn btn-primary" style="padding: 8px 18px;">
+            <span>📦</span> Δημιουργία ZIP
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ABOUT MODAL -->
   <div id="about-modal" class="modal-overlay">
     <div class="modal-window about-modal-window" style="max-width: 560px;">
@@ -496,7 +539,7 @@
             <img src="assets/my_avatar.jpg" alt="Λέων Προκόπης" class="about-avatar-img">
           </div>
           <div class="about-creator-details">
-            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.8.0</span></div>
+            <div class="about-app-title">EduHTML Studio <span class="about-app-version">v1.9.0</span></div>
             <div class="about-creator-name">Λέων Προκόπης</div>
             <div class="about-creator-role">Καθηγητής Πληροφορικής ΠΕ86</div>
             <div class="about-creator-school">2ο ΓΕΛ Ναυπλίου</div>
@@ -569,6 +612,8 @@
               <div><kbd>Ctrl + M</kbd> <span>Εναλλαγή Mode (Αρχάριος/Προχωρημένος)</span></div>
               <div><kbd>Ctrl + Shift + T</kbd> <span>Εναλλαγή φωτεινού / σκοτεινού θέματος</span></div>
               <div><kbd>Ctrl + Shift + S</kbd> <span>Αποθήκευση ως…</span></div>
+              <div><kbd>Ctrl + Tab</kbd> <span>Επόμενη καρτέλα αρχείου</span></div>
+              <div><kbd>Ctrl + W</kbd> <span>Κλείσιμο καρτέλας αρχείου</span></div>
               <div><kbd>Ctrl + Shift + P</kbd> <span>Εισαγωγή εικόνας (&lt;img src&gt;)</span></div>
               <div><kbd>Ctrl + Space</kbd> <span>Προτάσεις Εντολών (Autocomplete)</span></div>
               <div><kbd>Shift+Alt+F</kbd> <span>Αυτόματη Μορφοποίηση Κώδικα</span></div>

@@ -3,8 +3,15 @@
 let currentMode = 'beginner'; // 'beginner' (ενιαίο) ή 'advanced' (multi-tab)
 let activeTab = 'html'; // 'html' ή 'css'
 let editor = null;
-let htmlDoc = null;
-let cssDoc = null;
+let htmlDoc = null; // το έγγραφο της ενεργής (ή της τελευταίας ενεργής) καρτέλας HTML
+let cssDoc = null;  // το έγγραφο της ενεργής (ή της τελευταίας ενεργής) καρτέλας CSS
+
+// Ανοιχτά αρχεία σε καρτέλες: { id, kind: 'html' | 'css', doc, path, saved }
+// Η προεπισκόπηση δείχνει την καρτέλα HTML που έχει το focus (ή την τελευταία, όταν το focus είναι σε CSS).
+let fileTabs = [];
+let activeTabId = null;
+let lastTabId = { html: null, css: null };
+let nextTabId = 1;
 let autoRefresh = true;
 let refreshTimer = null;
 let currentFontSize = 14;
@@ -98,6 +105,45 @@ let appSettings = {
 let currentHtmlFilePath = null;
 let currentCssFilePath = null;
 
+// Το όνομα ενός αρχείου από τη διαδρομή του (C:\…\askisi.html → askisi.html)
+function fileNameOf(filePath) {
+  return filePath ? String(filePath).split(/[\\/]/).pop() : '';
+}
+
+// Η διαδρομή όπως τη δείχνει ένας browser, συντομευμένη ώστε να φαίνεται πάντα το όνομα του αρχείου:
+// C:\Users\x\Documents\mywebpages\askisi.html → file:///C:/…/mywebpages/askisi.html
+function displayFileUrl(filePath) {
+  const isNetwork = /^(\\\\|\/\/)/.test(filePath);
+  const parts = String(filePath).split(/[\\/]/).filter(Boolean);
+  const shown = parts.length > 4 ? [parts[0], '…', ...parts.slice(-2)] : parts;
+  return (isNetwork ? 'file://' : 'file:///') + shown.join('/');
+}
+
+// Ορίζει το αρχείο που είναι ανοιχτό (kind: 'html' | 'css'· null = νέο, χωρίς αποθήκευση) και ενημερώνει την εμφάνιση
+function setCurrentFile(kind, filePath) {
+  if (kind === 'css') currentCssFilePath = filePath || null;
+  else currentHtmlFilePath = filePath || null;
+  const tab = fileTabs.find((t) => t.id === lastTabId[kind === 'css' ? 'css' : 'html']);
+  if (tab) tab.path = filePath || null;
+  updateFileUI();
+}
+
+// Οι καρτέλες, ο τίτλος του παραθύρου και η μπάρα της προεπισκόπησης δείχνουν το πραγματικό αρχείο
+function updateFileUI() {
+  const htmlTab = fileTabs.find((t) => t.id === lastTabId.html);
+  const htmlName = htmlTab ? tabDisplayName(htmlTab) : (fileNameOf(currentHtmlFilePath) || 'Ανώνυμη');
+  const notSaved = 'Νέο αρχείο: δεν έχει αποθηκευτεί ακόμα';
+
+  renderTabs();
+
+  const address = document.getElementById('preview-address');
+  if (address) {
+    address.textContent = currentHtmlFilePath ? displayFileUrl(currentHtmlFilePath) : 'Νέο αρχείο (δεν έχει αποθηκευτεί ακόμα)';
+    address.title = currentHtmlFilePath || notSaved;
+  }
+  document.title = `${htmlName} — EduHTML Studio`;
+}
+
 // Βοηθητικές συναρτήσεις διαδρομών & φακέλου εργασίας (Working Directory)
 function getDirectoryFromPath(filePath) {
   if (!filePath) return '';
@@ -167,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try { initGuide(); } catch (e) { console.error('Guide init:', e); }
   try { initTemplatesModal(); } catch (e) { console.error('Templates init:', e); }
   try { initSettings(); } catch (e) { console.error('Settings init:', e); }
+  try { updateFileUI(); } catch (e) { console.error('File UI init:', e); }
   try { initUpdater(); } catch (e) { console.error('Updater init:', e); }
   try { setupEventListeners(); } catch (e) { console.error('Listeners init:', e); }
   try { setupElectronMenuBridge(); } catch (e) { console.error('Menu bridge:', e); }
@@ -184,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Δυναμική φόρτωση και ενημέρωση της έκδοσης (status bar & about modal)
 async function initAppVersion() {
-  let appVersion = '1.8.0';
+  let appVersion = '1.9.0';
   if (window.electronAPI && window.electronAPI.getVersion) {
     try {
       const v = await window.electronAPI.getVersion();
@@ -237,13 +284,24 @@ function initSplashBanner() {
 function initEditor() {
   const editorTextarea = document.getElementById('code-editor');
 
-  htmlDoc = CodeMirror.Doc(defaultBeginnerCode, 'htmlmixed');
-  cssDoc = CodeMirror.Doc(defaultAdvancedCSS, 'css');
+  const firstHtml = addFileTab('html', defaultBeginnerCode, null);
+  const firstCss = addFileTab('css', defaultAdvancedCSS, null);
+  htmlDoc = firstHtml.doc;
+  cssDoc = firstCss.doc;
+  activeTabId = firstHtml.id;
 
   editor = CodeMirror.fromTextArea(editorTextarea, {
     lineNumbers: true,
     theme: 'eduhtml',
-    autoCloseTags: true,
+    // Αυτόματο κλείσιμο ετικετών. Σε νέα γραμμή κλείνουν μόνο οι ετικέτες που περιέχουν άλλα στοιχεία (div, ul, table…)·
+    // οι ετικέτες μίας γραμμής (h1–h6, p, a, li, title, button…) κλείνουν στην ίδια γραμμή, με τον κέρσορα ανάμεσα
+    autoCloseTags: {
+      whenClosing: true,
+      whenOpening: true,
+      indentTags: ['html', 'head', 'body', 'div', 'ul', 'ol', 'dl', 'table', 'thead', 'tbody', 'tfoot', 'tr',
+        'form', 'fieldset', 'select', 'blockquote', 'section', 'article', 'nav', 'header', 'footer', 'main',
+        'aside', 'figure', 'details', 'frameset', 'object']
+    },
     autoCloseBrackets: true,
     matchTags: { bothTags: true },
     tabSize: 2,
@@ -331,12 +389,187 @@ function triggerAutocomplete(cm) {
   }
 }
 
-// Δείχνει αν υπάρχουν μη αποθηκευμένες αλλαγές: γραμμή κατάστασης και γρήγορο κουμπί αποθήκευσης στη μπάρα του editor
+// Σημειώνει αν η καρτέλα έχει μη αποθηκευμένες αλλαγές (τελεία στην καρτέλα· η γραμμή κατάστασης δείχνει την ενεργή)
+function markTabSaved(tab, saved) {
+  if (!tab) return;
+  const changed = tab.saved !== saved;
+  tab.saved = saved;
+  if (tab.id === activeTabId) {
+    const saveEl = document.getElementById('status-save');
+    if (saveEl) saveEl.textContent = saved ? '✔ Αποθηκευμένο' : '● Μη αποθηκευμένο';
+  }
+  if (changed) renderTabs();
+}
+
+// Η κατάσταση αποθήκευσης της καρτέλας που φαίνεται στον editor
 function setSavedState(saved) {
+  markTabSaved(getActiveTab(), saved);
+}
+
+// ---------------------------------------------------------------- καρτέλες αρχείων
+function getActiveTab() {
+  return fileTabs.find((t) => t.id === activeTabId) || null;
+}
+
+function tabOfDoc(doc) {
+  return fileTabs.find((t) => t.doc === doc) || null;
+}
+
+function tabOfPath(filePath) {
+  if (!filePath) return null;
+  const p = String(filePath).toLowerCase();
+  return fileTabs.find((t) => t.path && String(t.path).toLowerCase() === p) || null;
+}
+
+// Ένα αρχείο που δεν έχει αποθηκευτεί ακόμα λέγεται «Ανώνυμη N» (CSS: «Ανώνυμο CSS N»), ώστε ο μαθητής να βλέπει
+// ότι πρέπει να το αποθηκεύσει· μετά την αποθήκευση η καρτέλα παίρνει το όνομα του αρχείου
+let untitledCounter = { html: 0, css: 0 };
+function tabDisplayName(tab) {
+  if (tab.path) return fileNameOf(tab.path);
+  return (tab.kind === 'css' ? 'Ανώνυμο CSS ' : 'Ανώνυμη ') + tab.untitledNo;
+}
+
+// Νέα καρτέλα (χωρίς να γίνει ενεργή)
+function addFileTab(kind, content, filePath) {
+  const tab = {
+    id: nextTabId++,
+    kind,
+    doc: CodeMirror.Doc(content || '', kind === 'css' ? 'css' : 'htmlmixed'),
+    path: filePath || null,
+    saved: true,
+    untitledNo: ++untitledCounter[kind] // αρίθμηση των ανώνυμων καρτελών (Ανώνυμη 1, Ανώνυμη 2…)
+  };
+  fileTabs.push(tab);
+  if (!lastTabId[kind]) lastTabId[kind] = tab.id;
+  return tab;
+}
+
+// Καρτέλα που μπορεί να αντικατασταθεί από ένα αρχείο που ανοίγει: νέα, χωρίς αλλαγές (π.χ. η αρχική)
+function isPristineTab(tab) {
+  return !!tab && !tab.path && tab.saved;
+}
+
+// Κάνει ενεργή μια καρτέλα: τη δείχνει ο editor και (αν είναι HTML) η προεπισκόπηση
+function activateTab(id) {
+  const tab = fileTabs.find((t) => t.id === id);
+  if (!tab) return;
+  if (tab.kind === 'css' && currentMode === 'beginner') setMode('advanced');
+  activeTabId = tab.id;
+  activeTab = tab.kind;
+  lastTabId[tab.kind] = tab.id;
+  if (tab.kind === 'css') {
+    cssDoc = tab.doc;
+    currentCssFilePath = tab.path;
+  } else {
+    htmlDoc = tab.doc;
+    currentHtmlFilePath = tab.path;
+  }
+  if (editor && editor.getDoc() !== tab.doc) editor.swapDoc(tab.doc);
   const saveEl = document.getElementById('status-save');
-  if (saveEl) saveEl.textContent = saved ? '✔ Αποθηκευμένο' : '● Μη αποθηκευμένο';
-  const quickSave = document.getElementById('btn-quick-save');
-  if (quickSave) quickSave.classList.toggle('is-dirty', !saved);
+  if (saveEl) saveEl.textContent = tab.saved ? '✔ Αποθηκευμένο' : '● Μη αποθηκευμένο';
+  updateFileUI();
+  if (editor) {
+    editor.focus();
+    updateCursorInfo();
+  }
+  try { updateLivePreview(); } catch (e) { console.error('Preview error:', e); }
+  try { validateHtmlCode(); } catch (e) { console.error('Validation error:', e); }
+}
+
+// Ανοίγει περιεχόμενο σε καρτέλα: αν το αρχείο είναι ήδη ανοιχτό, πηγαίνει σε αυτό· μια νέα, άθικτη καρτέλα του ίδιου
+// είδους αντικαθίσταται (π.χ. η αρχική κενή σελίδα)· αλλιώς ανοίγει νέα καρτέλα
+function openInTab(kind, content, filePath) {
+  const existing = tabOfPath(filePath);
+  if (existing) {
+    activateTab(existing.id);
+    return existing;
+  }
+  const current = fileTabs.find((t) => t.id === lastTabId[kind]);
+  let tab;
+  if (isPristineTab(current)) {
+    tab = current;
+    tab.doc.setValue(content);
+    tab.doc.clearHistory();
+    tab.path = filePath || null;
+  } else {
+    tab = addFileTab(kind, content, filePath);
+  }
+  tab.saved = true;
+  activateTab(tab.id);
+  return tab;
+}
+
+// Κλείνει μια καρτέλα (ρωτά αν έχει μη αποθηκευμένες αλλαγές). Μένει πάντα τουλάχιστον μία καρτέλα HTML.
+function closeFileTab(id) {
+  const tab = fileTabs.find((t) => t.id === id);
+  if (!tab) return;
+  const name = tabDisplayName(tab);
+  if (!tab.saved && !confirm(`Το αρχείο «${name}» έχει μη αποθηκευμένες αλλαγές που θα χαθούν.\n\nΝα κλείσει χωρίς αποθήκευση;`)) return;
+
+  const index = fileTabs.indexOf(tab);
+  fileTabs.splice(index, 1);
+  if (!fileTabs.some((t) => t.kind === 'html')) addFileTab('html', cleanNewSkeleton, null);
+  if (!fileTabs.some((t) => t.kind === 'css')) addFileTab('css', defaultAdvancedCSS, null);
+  for (const kind of ['html', 'css']) {
+    if (lastTabId[kind] === id) {
+      const same = fileTabs.filter((t) => t.kind === kind);
+      lastTabId[kind] = (same[Math.min(index, same.length - 1)] || same[0]).id;
+    }
+  }
+  if (activeTabId === id) {
+    const visible = visibleTabs();
+    const next = visible[Math.min(index, visible.length - 1)] || visible[0];
+    activateTab(next.id);
+  } else {
+    renderTabs();
+  }
+}
+
+// Στη λειτουργία «Αρχάριος» φαίνονται μόνο οι καρτέλες HTML
+function visibleTabs() {
+  return fileTabs.filter((t) => currentMode === 'advanced' || t.kind === 'html');
+}
+
+function renderTabs() {
+  const group = document.getElementById('tabs-group');
+  if (!group) return;
+  group.innerHTML = '';
+  for (const tab of visibleTabs()) {
+    const name = tabDisplayName(tab);
+    const el = document.createElement('div');
+    el.className = 'tab' + (tab.id === activeTabId ? ' active' : '') + (tab.saved ? '' : ' is-dirty');
+    el.dataset.kind = tab.kind;
+    el.dataset.tabId = tab.id;
+    el.setAttribute('role', 'tab');
+    el.setAttribute('aria-selected', tab.id === activeTabId ? 'true' : 'false');
+    el.title = (tab.path || 'Νέο αρχείο: δεν έχει αποθηκευτεί ακόμα') + (tab.saved ? '' : '\n● Μη αποθηκευμένες αλλαγές');
+
+    const icon = document.createElement('span');
+    icon.className = 'tab-icon';
+    const label = document.createElement('span');
+    label.className = 'tab-name';
+    label.textContent = name;
+    const close = document.createElement('button');
+    close.className = 'tab-close';
+    close.type = 'button';
+    close.textContent = '✕';
+    close.title = 'Κλείσιμο (Ctrl+W)';
+    close.onclick = (e) => { e.stopPropagation(); closeFileTab(tab.id); };
+
+    el.append(icon, label, close);
+    el.onclick = () => { if (tab.id !== activeTabId) activateTab(tab.id); };
+    el.onauxclick = (e) => { if (e.button === 1) { e.preventDefault(); closeFileTab(tab.id); } }; // μεσαίο κλικ
+    group.appendChild(el);
+    if (tab.id === activeTabId) setTimeout(() => el.scrollIntoView({ block: 'nearest', inline: 'nearest' }), 0);
+  }
+}
+
+// Ctrl+Tab / Ctrl+Shift+Tab: επόμενη / προηγούμενη καρτέλα
+function cycleTabs(step) {
+  const visible = visibleTabs();
+  if (visible.length < 2) return;
+  const i = visible.findIndex((t) => t.id === activeTabId);
+  activateTab(visible[(i + step + visible.length) % visible.length].id);
 }
 
 function onCodeChanged() {
@@ -368,21 +601,19 @@ function setMode(mode) {
 
   const btnBeginner = document.getElementById('btn-mode-beginner');
   const btnAdvanced = document.getElementById('btn-mode-advanced');
-  const tabsBar = document.getElementById('tabs-group');
-  const tabCss = document.getElementById('tab-css');
 
   if (mode === 'beginner') {
     currentMode = 'beginner';
     btnBeginner.classList.add('active');
     btnAdvanced.classList.remove('active');
-    tabCss.style.display = 'none';
     switchTab('html');
+    renderTabs();
     showToast('Λειτουργία «Αρχάριος»: Ενιαίο αρχείο HTML με εσωτερικό CSS');
   } else {
     currentMode = 'advanced';
     btnAdvanced.classList.add('active');
     btnBeginner.classList.remove('active');
-    tabCss.style.display = 'flex';
+    renderTabs();
     showToast('Λειτουργία «Προχωρημένος»: Ξεχωριστά Tabs HTML και CSS');
   }
 
@@ -394,26 +625,206 @@ function setMode(mode) {
   validateHtmlCode();
 }
 
-// Εναλλαγή καρτελών (Tabs)
-function switchTab(tab) {
-  if (activeTab === tab) return;
+// Μετάβαση στην (τελευταία ενεργή) καρτέλα HTML ή CSS
+function switchTab(kind) {
+  if (activeTab === kind && getActiveTab() && getActiveTab().kind === kind) return;
+  let tab = fileTabs.find((t) => t.id === lastTabId[kind]) || fileTabs.find((t) => t.kind === kind);
+  if (!tab) tab = addFileTab(kind, kind === 'css' ? defaultAdvancedCSS : cleanNewSkeleton, null);
+  activateTab(tab.id);
+}
 
-  activeTab = tab;
-  const tabHtml = document.getElementById('tab-html');
-  const tabCss = document.getElementById('tab-css');
+// --- ΣΥΝΔΕΣΗ HTML ↔ CSS (λειτουργία «Προχωρημένος») ---
 
-  if (tab === 'html') {
-    tabHtml.classList.add('active');
-    tabCss.classList.remove('active');
-    editor.swapDoc(htmlDoc);
-  } else {
-    tabCss.classList.add('active');
-    tabHtml.classList.remove('active');
-    editor.swapDoc(cssDoc);
+// Τα <link rel="stylesheet" href="…"> της σελίδας (εκτός σχολίων): { index, length, href, local }
+function stylesheetLinks(html) {
+  const code = String(html).replace(/<!--[\s\S]*?-->/g, (m) => ' '.repeat(m.length)); // τα σχόλια αγνοούνται, οι θέσεις μένουν
+  const out = [];
+  const re = /<link\b[^>]*>/gi;
+  let m;
+  while ((m = re.exec(code))) {
+    const tag = m[0];
+    if (!/\brel\s*=\s*["']?[^"'>]*\bstylesheet\b/i.test(tag)) continue;
+    const h = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(tag);
+    const href = h ? (h[1] !== undefined ? h[1] : (h[2] !== undefined ? h[2] : h[3])) : '';
+    out.push({ index: m.index, length: tag.length, href, local: !!href && !/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(href) });
   }
+  return out;
+}
 
+function normPath(p) {
+  return String(p).split('\\').join('/').toLowerCase();
+}
+
+// Η διαδρομή ενός href (π.χ. css/style.css, ../koino.css) ως προς τον φάκελο της σελίδας
+function resolveHref(htmlPath, href) {
+  let clean = String(href).split(/[?#]/)[0];
+  try { clean = decodeURIComponent(clean); } catch (_) { /* μένει όπως είναι */ }
+  const parts = getDirectoryFromPath(htmlPath).split(/[\\/]/).filter((s, i) => s || i === 0);
+  for (const seg of clean.split(/[\\/]/)) {
+    if (!seg || seg === '.') continue;
+    if (seg === '..') parts.pop();
+    else parts.push(seg);
+  }
+  return parts.join('/');
+}
+
+// Η ανοιχτή καρτέλα CSS που αντιστοιχεί σε ένα href της σελίδας (ή null)
+function cssTabForHref(href) {
+  const clean = String(href).split(/[?#]/)[0].replace(/^\.\//, '');
+  const base = fileNameOf(clean).toLowerCase();
+  const cssTabs = fileTabs.filter((t) => t.kind === 'css');
+  let found = null;
+  if (currentHtmlFilePath && /[\\/]/.test(currentHtmlFilePath)) {
+    const target = normPath(resolveHref(currentHtmlFilePath, clean));
+    found = cssTabs.find((t) => t.path && normPath(t.path) === target);
+  } else {
+    found = cssTabs.find((t) => t.path && fileNameOf(t.path).toLowerCase() === base);
+  }
+  if (found) return found;
+  // Ένα ανώνυμο CSS θα αποθηκευτεί ως style.css δίπλα στη σελίδα: το <link href="style.css"> το βρίσκει ήδη.
+  // Για μια αποθηκευμένη σελίδα μετρά μόνο αν ο μαθητής έχει γράψει σε αυτό· αλλιώς ισχύει το style.css του δίσκου.
+  if (base === 'style.css' && !/[\\/]/.test(clean)) {
+    const pageSaved = !!currentHtmlFilePath && /[\\/]/.test(currentHtmlFilePath);
+    const usable = (t) => !t.path && (!pageSaved || !t.saved);
+    const last = cssTabs.find((t) => t.id === lastTabId.css);
+    return (last && usable(last)) ? last : (cssTabs.find(usable) || null);
+  }
+  return null;
+}
+
+// --- ΑΡΧΕΙΑ ΠΟΥ ΑΝΑΦΕΡΕΙ Η ΣΕΛΙΔΑ ΑΛΛΑ ΔΕΝ ΥΠΑΡΧΟΥΝ ---
+// Εικόνες, CSS, JavaScript, σελίδες (<a href>), βίντεο/ήχος, iframe: ελέγχονται στον δίσκο, ως προς τον φάκελο της
+// σελίδας (ή τον φάκελο εργασίας, αν δεν έχει αποθηκευτεί), και εμφανίζονται στις παρατηρήσεις της μπάρας ελέγχου.
+const REF_LABELS = {
+  img: 'εικόνα', source: 'πολυμέσα', video: 'βίντεο', audio: 'ήχος', track: 'υπότιτλοι', script: 'JavaScript',
+  link: 'CSS', a: 'σύνδεσμος σε σελίδα', iframe: 'σελίδα σε iframe', embed: 'αρχείο', object: 'αρχείο'
+};
+
+// Τα τοπικά αρχεία που αναφέρει η σελίδα: [{ tag, href }] (όχι διευθύνσεις internet, #άγκυρες, mailto: κ.λπ.)
+function localReferences(html) {
+  const code = String(html).replace(/<!--[\s\S]*?-->/g, '');
+  const refs = [];
+  const re = /<(img|source|video|audio|track|script|link|a|iframe|embed|object)\b([^>]*)>/gi;
+  let m;
+  while ((m = re.exec(code))) {
+    const tag = m[1].toLowerCase();
+    const attrs = m[2];
+    if (tag === 'link' && !/\brel\s*=\s*["']?[^"'>]*\bstylesheet\b/i.test(attrs)) continue; // από τα <link> μόνο τα CSS
+    const attr = (tag === 'a' || tag === 'link') ? 'href' : (tag === 'object' ? 'data' : 'src');
+    const am = new RegExp('(?:^|\\s)' + attr + '\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s"\'>]+))', 'i').exec(attrs);
+    if (!am) continue;
+    const value = (am[1] !== undefined ? am[1] : (am[2] !== undefined ? am[2] : am[3] || '')).trim();
+    if (!value || value.startsWith('#')) continue;
+    if (/^(https?:)?\/\//i.test(value) || /^(data|mailto|tel|javascript|about|blob|sms):/i.test(value)) continue;
+    refs.push({ tag, href: value });
+  }
+  return refs;
+}
+
+// Η διαδρομή στον δίσκο ενός href/src (σχετικό ως προς τον φάκελο, ή file:///…), ή null αν δεν ελέγχεται
+function refToPath(baseDir, href) {
+  let clean = String(href).split(/[?#]/)[0];
+  try { clean = decodeURIComponent(clean); } catch (_) { /* μένει όπως είναι */ }
+  if (/^file:/i.test(clean)) {
+    const rest = clean.replace(/^file:\/*/i, '');
+    return /^[a-z]:/i.test(rest) ? rest : '//' + rest; // file:///C:/… ή file://server/share/…
+  }
+  if (/^[a-z]:[\\/]/i.test(clean) || /^\\\\/.test(clean)) return clean;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(clean) || clean.startsWith('/') || !baseDir) return null;
+  const parts = baseDir.split(/[\\/]/).filter((s, i) => s || i === 0);
+  for (const seg of clean.split(/[\\/]/)) {
+    if (!seg || seg === '.') continue;
+    if (seg === '..') parts.pop();
+    else parts.push(seg);
+  }
+  return parts.join('/');
+}
+
+let missingFiles = [];       // [{ tag, href }] που δεν βρέθηκαν
+let unsavedLinkedCss = [];   // href ανώνυμων CSS που χρησιμοποιεί η σελίδα αλλά δεν έχουν αποθηκευτεί
+let fileCheckToken = 0;
+
+// Ελέγχει στον δίσκο τα αρχεία που αναφέρει η σελίδα· αν αλλάξει το αποτέλεσμα, ενημερώνει τη μπάρα ελέγχου
+async function checkReferencedFiles(code) {
+  if (!window.electronAPI || !window.electronAPI.checkFilesExist) return;
+  const token = ++fileCheckToken;
+  const baseDir = getCurrentWorkingDir();
+  const pageSaved = !!currentHtmlFilePath && /[\\/]/.test(currentHtmlFilePath);
+  const seen = new Set();
+  const refs = [];
+  const unsaved = [];
+  for (const ref of localReferences(code)) {
+    if (seen.has(ref.tag + '|' + ref.href)) continue;
+    seen.add(ref.tag + '|' + ref.href);
+    // Στον «Προχωρημένο» ένα CSS ανοιχτό σε καρτέλα δίνει το περιεχόμενό του στην προεπισκόπηση
+    if (ref.tag === 'link' && currentMode === 'advanced') {
+      const tab = cssTabForHref(ref.href);
+      if (tab && !tab.path) {
+        if (pageSaved) unsaved.push(ref.href);
+        continue;
+      }
+    }
+    refs.push(ref);
+  }
+  const paths = refs.map((r) => refToPath(baseDir, r.href));
+  const toCheck = paths.filter(Boolean);
+  let exists = [];
+  try {
+    exists = toCheck.length ? await window.electronAPI.checkFilesExist(toCheck) : [];
+  } catch (_) {
+    return;
+  }
+  if (token !== fileCheckToken) return; // στο μεταξύ ο κώδικας άλλαξε: ισχύει ο νεότερος έλεγχος
+  const existsByPath = new Map(toCheck.map((p, i) => [p, !!exists[i]]));
+  const missing = refs.filter((r, i) => paths[i] && !existsByPath.get(paths[i]));
+  const key = (list) => JSON.stringify(list);
+  if (key(missing) !== key(missingFiles) || key(unsaved) !== key(unsavedLinkedCss)) {
+    missingFiles = missing;
+    unsavedLinkedCss = unsaved;
+    validateHtmlCode(true);
+  }
+}
+
+// Προσθέτει <link rel="stylesheet" href="…"> μέσα στο <head> της σελίδας (κουμπί «Σύνδεση με CSS»)
+function insertCssLink() {
+  if (currentMode !== 'advanced') setMode('advanced');
+  if (activeTab !== 'html') switchTab('html');
+
+  // το CSS της τελευταίας καρτέλας CSS, με διαδρομή ως προς τη σελίδα· αλλιώς style.css
+  let href = 'style.css';
+  const css = fileTabs.find((t) => t.id === lastTabId.css);
+  if (css && css.path) {
+    const dir = normPath(getDirectoryFromPath(currentHtmlFilePath || ''));
+    const cssPath = String(css.path).split('\\').join('/');
+    href = (dir && normPath(cssPath).startsWith(dir + '/')) ? cssPath.slice(dir.length + 1) : fileNameOf(css.path);
+  }
+  const line = `<link rel="stylesheet" href="${href}">`;
+
+  const text = htmlDoc.getValue();
+  const headClose = text.search(/<\/head\s*>/i);
+  let at;
+  let insert;
+  if (headClose >= 0) {
+    const lineStart = text.lastIndexOf('\n', headClose - 1) + 1;
+    const before = text.slice(lineStart, headClose);
+    if (/^\s*$/.test(before)) {
+      // το </head> είναι μόνο του στη γραμμή: νέα γραμμή από πάνω, με την εσοχή του head + 2 κενά
+      at = lineStart;
+      insert = before + '  ' + line + '\n';
+    } else {
+      at = headClose;
+      insert = line;
+    }
+  } else {
+    const htmlOpen = /<html\b[^>]*>/i.exec(text);
+    at = htmlOpen ? htmlOpen.index + htmlOpen[0].length : 0;
+    insert = (htmlOpen ? '\n' : '') + '<head>\n  ' + line + '\n</head>' + (htmlOpen ? '' : '\n');
+  }
+  htmlDoc.replaceRange(insert, htmlDoc.posFromIndex(at));
+  const lineIndex = at + insert.indexOf(line);
+  htmlDoc.setSelection(htmlDoc.posFromIndex(lineIndex), htmlDoc.posFromIndex(lineIndex + line.length));
   editor.focus();
-  updateCursorInfo();
+  showToast(`Η σελίδα συνδέθηκε με το «${href}».`);
 }
 
 // Σύνθεση τελικού κώδικα HTML για προεπισκόπηση και εξωτερικό browser
@@ -421,14 +832,16 @@ function getCompiledHTML(includeBase = true) {
   let htmlContent = htmlDoc.getValue();
 
   if (currentMode !== 'beginner') {
-    // Στη λειτουργία προχωρημένου, ενσωματώνουμε το CSS στο <head> αν υπάρχει
-    const cssContent = cssDoc.getValue();
-    const styleTag = `<style>\n${cssContent}\n</style>`;
-
-    if (htmlContent.includes('</head>')) {
-      htmlContent = htmlContent.replace('</head>', `${styleTag}\n</head>`);
-    } else {
-      htmlContent = `${styleTag}\n${htmlContent}`;
+    // Προχωρημένος: το CSS εφαρμόζεται ΜΟΝΟ μέσω των <link rel="stylesheet"> της σελίδας, όπως σε έναν browser.
+    // Ένα <link> προς αρχείο που είναι ανοιχτό σε καρτέλα παίρνει το περιεχόμενο της καρτέλας (μαζί με τις αλλαγές που
+    // δεν έχουν αποθηκευτεί)· τα υπόλοιπα φορτώνονται από τον δίσκο μέσω του <base href>.
+    const links = stylesheetLinks(htmlContent);
+    for (let i = links.length - 1; i >= 0; i--) {
+      const link = links[i];
+      const tab = link.local ? cssTabForHref(link.href) : null;
+      if (!tab) continue;
+      const style = `<style data-href="${link.href.replace(/"/g, '&quot;')}">\n${tab.doc.getValue()}\n</style>`;
+      htmlContent = htmlContent.slice(0, link.index) + style + htmlContent.slice(link.index + link.length);
     }
   }
 
@@ -492,35 +905,64 @@ document.addEventListener('contextmenu', function(e) {
 }
 
 // Άνοιγμα στον Επιλεγμένο Browser / Άνοιγμα URL
+/**
+ * Η «Προβολή στον browser» ανοίγει το ΙΔΙΟ το αρχείο της σελίδας (π.χ. askisi.html), όχι προσωρινό αντίγραφο.
+ * Πρώτα αποθηκεύεται, όπως με το Ctrl+S· μια σελίδα που δεν έχει αποθηκευτεί ακόμα ζητά όνομα. Στη λειτουργία
+ * «Προχωρημένος» αποθηκεύεται και το CSS (ένα νέο CSS προτείνεται ως style.css δίπλα στη σελίδα, όπως το συνδέει το HTML).
+ * Επιστρέφει τη διαδρομή της σελίδας ή null αν ο χρήστης ακύρωσε την αποθήκευση.
+ */
+async function saveForBrowserView() {
+  if (!currentHtmlFilePath || !/[\\/]/.test(currentHtmlFilePath)) {
+    showToast('Αποθηκεύστε τη σελίδα για να ανοίξει στον browser.');
+    if (!(await saveDoc('html', { saveAs: true, quiet: true }))) return null;
+  } else if (!(await saveDoc('html', { quiet: true }))) {
+    return null;
+  }
+  if (currentMode === 'advanced') {
+    await saveDoc('css', { saveAs: !currentCssFilePath, quiet: true });
+  }
+  return currentHtmlFilePath;
+}
+
 async function openInExternalBrowser(options = {}) {
-  const compiled = getCompiledHTML();
   const browser = (options && options.browser) ? options.browser : (appSettings.browser || 'msedge');
   const isUrl = !!(options && options.isUrl && options.url);
   const targetUrl = isUrl ? options.url : '';
+  const browserLabel = getBrowserName(browser);
 
   const payload = {
-    content: compiled,
     browser: browser,
     isUrl: isUrl,
     url: targetUrl
   };
 
-  const browserLabel = getBrowserName(browser);
+  let viewedFile = null;
+  if (!isUrl && window.electronAPI && window.electronAPI.openInExternalBrowser) {
+    viewedFile = await saveForBrowserView();
+    if (viewedFile) {
+      payload.filePath = viewedFile;
+    } else {
+      // Ο χρήστης δεν αποθήκευσε: ο browser δείχνει προσωρινό αντίγραφο της σελίδας
+      payload.content = getCompiledHTML();
+    }
+  }
 
   if (window.electronAPI && window.electronAPI.openInExternalBrowser) {
     const res = await window.electronAPI.openInExternalBrowser(payload);
     if (res.success) {
       if (isUrl) {
         showToast(`Άνοιγμα του ${targetUrl} στον ${browserLabel}...`);
+      } else if (viewedFile) {
+        showToast(`Αποθηκεύτηκε και άνοιξε στον ${browserLabel}: ${fileNameOf(viewedFile)}`);
       } else {
-        showToast(`Η σελίδα άνοιξε επιτυχώς στον ${browserLabel}!`);
+        showToast(`Η σελίδα δεν αποθηκεύτηκε· ο ${browserLabel} δείχνει προσωρινό αντίγραφο.`, 4500);
       }
     } else {
       showToast('Σφάλμα κατά το άνοιγμα του browser: ' + res.error);
     }
   } else {
     // Fallback για browser περιβάλλον
-    const target = isUrl ? targetUrl : URL.createObjectURL(new Blob([compiled], { type: 'text/html' }));
+    const target = isUrl ? targetUrl : URL.createObjectURL(new Blob([getCompiledHTML()], { type: 'text/html' }));
     window.open(target, '_blank');
     showToast('Άνοιγμα σε νέα καρτέλα!');
   }
@@ -742,7 +1184,7 @@ const VALID_HTML5_TAGS = new Set([
 ]);
 
 // Εκπαιδευτικός Έλεγχος & Βοηθός Σφαλμάτων για Μαθητές
-function validateHtmlCode() {
+function validateHtmlCode(fromFileCheck = false) {
   const statusEl = document.getElementById('validation-status');
   const tipEl = document.getElementById('validation-tip');
   if (!statusEl || !tipEl || !htmlDoc) return;
@@ -850,13 +1292,46 @@ function validateHtmlCode() {
       }
     }
 
+    // 8. Προχωρημένος: σύνδεση με το CSS (εμφανίζεται πρώτο, είναι το πιο σημαντικό)
+    let needsCssLink = false;
+    const notes = []; // παρατηρήσεις που δεν είναι λάθη (εμφανίζονται με πορτοκαλί, όχι με κόκκινο)
+    if (currentMode === 'advanced') {
+      const links = stylesheetLinks(code);
+      if (links.length === 0) {
+        needsCssLink = true;
+        notes.push('Η σελίδα δεν συνδέεται με αρχείο CSS: πρόσθεσε <link rel="stylesheet" href="style.css"> μέσα στο <head> (κουμπί «Σύνδεση με CSS»).');
+      }
+    }
+    // Αρχεία που αναφέρει η σελίδα αλλά δεν υπάρχουν (ή CSS που δεν έχει αποθηκευτεί ακόμα)
+    for (const href of unsavedLinkedCss) {
+      notes.push(`Το «${href}» δεν έχει αποθηκευτεί ακόμα: αποθήκευσέ το (Ctrl+S στην καρτέλα CSS) στον φάκελο της σελίδας.`);
+    }
+    const MAX_LISTED = 6;
+    for (const ref of missingFiles.slice(0, MAX_LISTED)) {
+      notes.push(`Δεν βρέθηκε το αρχείο «${ref.href}» (${REF_LABELS[ref.tag] || 'αρχείο'}): έλεγξε το όνομα και τον φάκελο.`);
+    }
+    if (missingFiles.length > MAX_LISTED) {
+      notes.push(`…και άλλα ${missingFiles.length - MAX_LISTED} αρχεία που δεν βρέθηκαν.`);
+    }
+    const fixBtn = document.getElementById('btn-fix-css-link');
+    if (fixBtn) fixBtn.hidden = !needsCssLink;
+    if (!fromFileCheck) checkReferencedFiles(code); // ασύγχρονα: ενημερώνει ξανά τη μπάρα αν βρει κάτι
+
     // Εμφάνιση αποτελέσματος
-    if (warnings.length === 0) {
+    if (warnings.length === 0 && notes.length > 0) {
+      // Μόνο παρατηρήσεις (π.χ. η σελίδα δεν συνδέεται με CSS): σκούρο πορτοκαλί, ώστε να μη μοιάζουν με λάθος
+      statusEl.innerHTML = `<span class="status-note">💡 ${notes.length} ${notes.length === 1 ? 'Παρατήρηση' : 'Παρατηρήσεις'}</span>`;
+      const noteTooltip = notes.map((w, idx) => `${idx + 1}. ${w}`).join('\n');
+      statusEl.title = noteTooltip;
+      tipEl.textContent = notes.join('  •  ');
+      tipEl.title = noteTooltip;
+    } else if (warnings.length === 0) {
       statusEl.innerHTML = '<span class="status-ok">🟢 Όλα εντάξει!</span>';
       statusEl.title = 'Δεν εντοπίστηκαν συντακτικά σφάλματα στον κώδικα.';
       tipEl.textContent = 'Ο κώδικάς σας είναι καθαρός και έτοιμος.';
       tipEl.title = 'Ο κώδικάς σας είναι καθαρός και έτοιμος.';
     } else {
+      warnings.push(...notes);
       statusEl.innerHTML = `<span class="status-warning" style="color: #ef4444; font-weight: 700;">⚠️ ${warnings.length} ${warnings.length === 1 ? 'Σφάλμα / Παρατήρηση' : 'Σφάλματα / Παρατηρήσεις'}</span>`;
       const fullTooltip = warnings.map((w, idx) => `${idx + 1}. ${w}`).join('\n');
       statusEl.title = fullTooltip;
@@ -901,8 +1376,8 @@ function initTemplatesModal() {
 function loadTemplate(tpl) {
   if (confirm(`Θέλετε να φορτώσετε το πρότυπο «${tpl.title}»;\nΤυχόν μη αποθηκευμένες αλλαγές θα αντικατασταθούν.`)) {
     // Το πρότυπο είναι νέο έγγραφο: η επόμενη αποθήκευση πρέπει να ζητήσει όνομα και όχι να γράψει πάνω στο αρχείο που ήταν ανοιχτό
-    currentHtmlFilePath = null;
-    currentCssFilePath = null;
+    setCurrentFile('html', null);
+    setCurrentFile('css', null);
     if (currentMode === 'beginner') {
       htmlDoc.setValue(tpl.singleFile);
     } else {
@@ -916,21 +1391,134 @@ function loadTemplate(tpl) {
 }
 
 // Εξαγωγή σε ZIP για παράδοση εργασίας στον καθηγητή
+// --- ΕΞΑΓΩΓΗ ΣΕ ZIP ---
+// Τρεις επιλογές: το τρέχον αρχείο, όλα τα ανοιχτά αρχεία ή ολόκληρος ο φάκελος της εργασίας (δες zipExport.js).
+// Τα αρχεία που δεν έχουν αποθηκευτεί δεν μπαίνουν· όσα έχουν μη αποθηκευμένες αλλαγές μπορούν να αποθηκευτούν πρώτα.
+let zipChoice = null;
+
+function isSavedPath(p) {
+  return !!p && /[\\/]/.test(p);
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1).replace('.', ',') + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+}
+
 async function exportZip() {
+  if (!window.electronAPI || !window.electronAPI.createZip) {
+    exportZipInBrowser();
+    return;
+  }
+  const active = getActiveTab();
+  const tabs = visibleTabs();
+  const saved = tabs.filter((t) => isSavedPath(t.path));
+  const unsaved = tabs.filter((t) => !isSavedPath(t.path));
+  // όταν το focus είναι σε CSS ή σε ανώνυμη καρτέλα, «τρέχον» είναι το αρχείο της καρτέλας αν έχει αποθηκευτεί
+  const current = active && isSavedPath(active.path) ? active : null;
+  const folderTab = current || saved.find((t) => t.kind === 'html') || saved[0] || null;
+  const folder = folderTab ? getDirectoryFromPath(folderTab.path) : '';
+  zipChoice = { current, saved, folder };
+
+  const setOption = (mode, enabled, desc) => {
+    const option = document.getElementById('zip-option-' + mode);
+    const radio = option.querySelector('input');
+    radio.disabled = !enabled;
+    option.classList.toggle('is-disabled', !enabled);
+    document.getElementById('zip-desc-' + mode).textContent = desc;
+  };
+  const unsavedNote = unsaved.length
+    ? ` · δεν μπαίνουν (δεν έχουν αποθηκευτεί): ${unsaved.map(tabDisplayName).join(', ')}`
+    : '';
+
+  setOption('current', !!current, current
+    ? fileNameOf(current.path)
+    : `Το «${active ? tabDisplayName(active) : ''}» δεν έχει αποθηκευτεί ακόμα: αποθήκευσέ το πρώτα.`);
+  setOption('tabs', saved.length > 0, saved.length
+    ? `${saved.length} ${saved.length === 1 ? 'αρχείο' : 'αρχεία'}: ${saved.map((t) => fileNameOf(t.path)).join(', ')}${unsavedNote}`
+    : 'Κανένα ανοιχτό αρχείο δεν έχει αποθηκευτεί ακόμα.' + unsavedNote);
+  setOption('folder', !!folder, folder ? `«${fileNameOf(folder)}»: μέτρηση αρχείων…` : 'Αποθήκευσε πρώτα ένα αρχείο για να υπάρχει φάκελος εργασίας.');
+
+  // προεπιλογή: όλα τα ανοιχτά αρχεία αν είναι περισσότερα από ένα, αλλιώς το τρέχον
+  const preferred = saved.length > 1 ? 'tabs' : (current ? 'current' : (saved.length ? 'tabs' : 'folder'));
+  for (const radio of document.querySelectorAll('input[name="zip-mode"]')) {
+    radio.checked = radio.value === preferred && !radio.disabled;
+    radio.onchange = updateZipSaveFirst;
+  }
+  updateZipSaveFirst();
+  document.getElementById('btn-zip-create').disabled = !current && !saved.length && !folder;
+  openModal('zip-modal');
+
+  if (folder) {
+    const info = await window.electronAPI.scanFolderForZip(folder);
+    if (zipChoice && zipChoice.folder === folder) {
+      document.getElementById('zip-desc-folder').textContent = info.ok
+        ? `«${fileNameOf(folder)}»: ${info.count} ${info.count === 1 ? 'αρχείο' : 'αρχεία'}, ${formatBytes(info.bytes)} (μαζί με τους υποφακέλους) — ${folder}`
+        : `«${fileNameOf(folder)}»: ${info.error}`;
+      if (!info.ok) setOption('folder', false, `«${fileNameOf(folder)}»: ${info.error}`);
+    }
+  }
+}
+
+// Οι καρτέλες που θα μπουν στο ZIP με την επιλογή που είναι τσεκαρισμένη
+function zipTabsForMode(mode) {
+  if (!zipChoice) return [];
+  if (mode === 'current') return zipChoice.current ? [zipChoice.current] : [];
+  if (mode === 'tabs') return zipChoice.saved;
+  const dir = normPath(zipChoice.folder) + '/';
+  return zipChoice.saved.filter((t) => normPath(t.path).startsWith(dir));
+}
+
+// «Αποθήκευση των αλλαγών πριν…»: φαίνεται μόνο όταν κάποιο από τα αρχεία του ZIP έχει μη αποθηκευμένες αλλαγές
+function updateZipSaveFirst() {
+  const checked = document.querySelector('input[name="zip-mode"]:checked');
+  const dirty = checked ? zipTabsForMode(checked.value).filter((t) => !t.saved) : [];
+  document.getElementById('zip-save-first-row').hidden = dirty.length === 0;
+  document.getElementById('zip-save-first-text').textContent =
+    `Αποθήκευση των αλλαγών πριν τη δημιουργία του ZIP (${dirty.map((t) => fileNameOf(t.path)).join(', ')})· αλλιώς μπαίνουν όπως είναι αποθηκευμένα.`;
+}
+
+async function createZipFromDialog() {
+  const checked = document.querySelector('input[name="zip-mode"]:checked');
+  if (!checked || !zipChoice) return;
+  const mode = checked.value;
+
+  if (document.getElementById('zip-save-first').checked) {
+    for (const tab of zipTabsForMode(mode).filter((t) => !t.saved)) {
+      const res = await window.electronAPI.saveFileDirect({ filePath: tab.path, content: tab.doc.getValue() });
+      if (res && res.success) markTabSaved(tab, true);
+    }
+  }
+
+  let request;
+  if (mode === 'folder') {
+    request = { mode: 'folder', folder: zipChoice.folder, suggestedName: fileNameOf(zipChoice.folder) };
+  } else {
+    const tabs = zipTabsForMode(mode);
+    const name = mode === 'current'
+      ? fileNameOf(tabs[0].path).replace(/\.[^.]+$/, '')
+      : (fileNameOf(getDirectoryFromPath(tabs[0].path)) || 'ergasia');
+    request = { mode: 'files', files: tabs.map((t) => t.path), suggestedName: name };
+  }
+
+  const res = await window.electronAPI.createZip(request);
+  if (res && res.ok) {
+    closeModal('zip-modal');
+    showToast(`Δημιουργήθηκε το «${fileNameOf(res.filePath)}» (${res.count} ${res.count === 1 ? 'αρχείο' : 'αρχεία'}, ${formatBytes(res.bytes)}).`, 4500);
+  } else if (res && !res.canceled) {
+    showToast('Δεν δημιουργήθηκε το ZIP: ' + res.error, 5000);
+  }
+}
+
+// Εκτός Electron (browser): το ZIP φτιάχνεται από τα περιεχόμενα του editor
+async function exportZipInBrowser() {
   if (typeof JSZip === 'undefined') {
     showToast('Η βιβλιοθήκη JSZip δεν είναι διαθέσιμη.');
     return;
   }
-
   const zip = new JSZip();
-
-  if (currentMode === 'beginner') {
-    zip.file('index.html', htmlDoc.getValue());
-  } else {
-    zip.file('index.html', htmlDoc.getValue());
-    zip.file('style.css', cssDoc.getValue());
-  }
-
+  for (const tab of visibleTabs()) zip.file(fileNameOf(tab.path) || (tabDisplayName(tab) + (tab.kind === 'css' ? '.css' : '.html')), tab.doc.getValue());
   const content = await zip.generateAsync({ type: 'blob' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(content);
@@ -941,61 +1529,71 @@ async function exportZip() {
   showToast('Το αρχείο ZIP δημιουργήθηκε και ξεκίνησε η λήψη!');
 }
 
-// Αποθήκευση αρχείου
+// Αποθήκευση του εγγράφου που φαίνεται στον editor (Ctrl+S, κουμπί «Αποθήκευση»· isSaveAs: «Αποθήκευση ως»)
 async function saveCurrentFile(isSaveAs = false) {
-  const isHtml = (activeTab === 'html');
+  return saveDoc(activeTab === 'css' ? 'css' : 'html', { saveAs: isSaveAs });
+}
+
+/**
+ * Αποθηκεύει το HTML ή το CSS στο αρχείο του. Αν δεν έχει αρχείο ή ζητήθηκε «Αποθήκευση ως», ανοίγει διάλογο· μετά το
+ * έγγραφο δουλεύει πάνω στο νέο αρχείο (όνομα στην καρτέλα, προεπισκόπηση). quiet: χωρίς μήνυμα. Επιστρέφει true αν αποθηκεύτηκε.
+ */
+async function saveDoc(kind, { saveAs = false, quiet = false } = {}) {
+  const isHtml = kind !== 'css';
   const content = isHtml ? htmlDoc.getValue() : cssDoc.getValue();
-  const defaultExt = isHtml ? 'html' : 'css';
+  const ext = isHtml ? 'html' : 'css';
   const currentPath = isHtml ? currentHtmlFilePath : currentCssFilePath;
-  const defaultName = currentPath || (isHtml ? 'index.html' : 'style.css');
 
-  if (window.electronAPI) {
-    // Αν δεν είναι "Αποθήκευση ως..." και το αρχείο έχει ήδη αποθηκευτεί στο δίσκο, κάνουμε άμεση αποθήκευση
-    if (!isSaveAs && currentPath && window.electronAPI.saveFileDirect) {
-      const resDirect = await window.electronAPI.saveFileDirect({
-        filePath: currentPath,
-        content: content
-      });
-
-      if (resDirect.success) {
-        setSavedState(true);
-        showToast('Το αρχείο αποθηκεύτηκε επιτυχώς!');
-        updateLivePreview();
-        return;
-      }
-    }
-
-    // Αλλιώς ανοίγουμε διάλογο αποθήκευσης
-    if (window.electronAPI.saveFile) {
-      const res = await window.electronAPI.saveFile({
-        defaultPath: defaultName,
-        content: content,
-        filters: [{ name: `${defaultExt.toUpperCase()} File`, extensions: [defaultExt] }]
-      });
-
-      if (res.success && res.filePath) {
-        if (isHtml) {
-          currentHtmlFilePath = res.filePath;
-        } else {
-          currentCssFilePath = res.filePath;
-        }
-        setSavedState(true);
-        showToast(`Το αρχείο αποθηκεύτηκε επιτυχώς!`);
-        updateLivePreview();
-      }
-    }
-  } else {
-    // Browser download fallback
+  if (!window.electronAPI) {
+    // Εκτός Electron: λήψη του αρχείου από τον browser
     const blob = new Blob([content], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = isHtml ? 'index.html' : 'style.css';
+    a.download = fileNameOf(currentPath) || (isHtml ? 'index.html' : 'style.css');
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setSavedState(true);
-    showToast(`Το αρχείο λήφθηκε επιτυχώς!`);
+    if (!quiet) showToast('Το αρχείο λήφθηκε επιτυχώς!');
+    return true;
   }
+
+  // Αρχείο που υπάρχει ήδη: απευθείας αποθήκευση, χωρίς διάλογο
+  if (!saveAs && currentPath && window.electronAPI.saveFileDirect) {
+    const res = await window.electronAPI.saveFileDirect({ filePath: currentPath, content });
+    if (res.success) {
+      markTabSaved(tabOfDoc(isHtml ? htmlDoc : cssDoc), true);
+      if (!quiet) showToast(`Αποθηκεύτηκε: ${fileNameOf(currentPath)}`);
+      updateLivePreview();
+      return true;
+    }
+  }
+
+  // Νέο αρχείο ή «Αποθήκευση ως»: διάλογος. Ένα νέο CSS προτείνεται δίπλα στη σελίδα ως style.css (όπως το συνδέει το HTML)
+  let defaultPath = currentPath || (isHtml ? 'index.html' : 'style.css');
+  if (!isHtml && !currentPath && currentHtmlFilePath) {
+    const dir = getDirectoryFromPath(currentHtmlFilePath);
+    if (dir) defaultPath = dir + (currentHtmlFilePath.includes('\\') ? '\\' : '/') + 'style.css';
+  }
+  if (!window.electronAPI.saveFile) return false;
+  const res = await window.electronAPI.saveFile({
+    defaultPath,
+    content,
+    filters: [{ name: `${ext.toUpperCase()} File`, extensions: [ext] }]
+  });
+  if (!res || !res.success || !res.filePath) return false;
+
+  // ένα άλλο ανοιχτό αντίγραφο του ίδιου αρχείου κλείνει (η καρτέλα αυτή είναι πλέον το αρχείο)
+  const duplicate = tabOfPath(res.filePath);
+  const thisTab = tabOfDoc(isHtml ? htmlDoc : cssDoc);
+  if (duplicate && duplicate !== thisTab) {
+    fileTabs.splice(fileTabs.indexOf(duplicate), 1);
+  }
+  setCurrentFile(isHtml ? 'html' : 'css', res.filePath);
+  markTabSaved(thisTab, true);
+  if (!quiet) showToast(`Αποθηκεύτηκε: ${fileNameOf(res.filePath)}`);
+  updateLivePreview();
+  return true;
 }
 
 // Άνοιγμα αρχείου
@@ -1003,19 +1601,9 @@ async function openFile() {
   if (window.electronAPI && window.electronAPI.openFile) {
     const res = await window.electronAPI.openFile();
     if (res) {
-      if (res.filePath.endsWith('.css')) {
-        if (currentMode === 'beginner') setMode('advanced');
-        cssDoc.setValue(res.content);
-        currentCssFilePath = res.filePath;
-        switchTab('css');
-      } else {
-        htmlDoc.setValue(res.content);
-        currentHtmlFilePath = res.filePath;
-        switchTab('html');
-      }
-      setSavedState(true);
-      updateLivePreview();
-      validateHtmlCode();
+      const kind = /\.css$/i.test(res.filePath) ? 'css' : 'html';
+      if (kind === 'css' && currentMode === 'beginner') setMode('advanced');
+      openInTab(kind, res.content, res.filePath);
       showToast(`Ανοίχθηκε το αρχείο: ${res.filePath}`);
     }
   } else {
@@ -1027,19 +1615,9 @@ async function openFile() {
       if (file) {
         const reader = new FileReader();
         reader.onload = (evt) => {
-          if (file.name.endsWith('.css')) {
-            if (currentMode === 'beginner') setMode('advanced');
-            cssDoc.setValue(evt.target.result);
-            currentCssFilePath = file.name;
-            switchTab('css');
-          } else {
-            htmlDoc.setValue(evt.target.result);
-            currentHtmlFilePath = file.name;
-            switchTab('html');
-          }
-          setSavedState(true);
-          updateLivePreview();
-          validateHtmlCode();
+          const kind = /\.css$/i.test(file.name) ? 'css' : 'html';
+          if (kind === 'css' && currentMode === 'beginner') setMode('advanced');
+          openInTab(kind, evt.target.result, file.name);
           showToast(`Ανοίχθηκε: ${file.name}`);
         };
         reader.readAsText(file);
@@ -1051,18 +1629,9 @@ async function openFile() {
 
 // Δημιουργία Νέου Αρχείου (Μόνο οι βασικές εντολές <!DOCTYPE html>, <html>, <head>, <title>, <body>)
 function createNewFile() {
-  if (confirm('Θέλετε να ξεκινήσετε ένα νέο κενό έγγραφο;')) {
-    htmlDoc.setValue(cleanNewSkeleton);
-    currentHtmlFilePath = null;
-    currentCssFilePath = null;
-    if (currentMode === 'advanced') {
-      cssDoc.setValue('/* style.css */\n');
-    }
-    setSavedState(true);
-    updateLivePreview();
-    validateHtmlCode();
-    showToast('Δημιουργήθηκε νέο κενό έγγραφο.');
-  }
+  const tab = addFileTab('html', cleanNewSkeleton, null);
+  activateTab(tab.id);
+  showToast('Νέο αρχείο σε νέα καρτέλα.');
 }
 
 // Μορφοποίηση κώδικα (Simple Beautifier)
@@ -1253,6 +1822,17 @@ function updateBrowserButton() {
   }
 }
 
+// «Απόκρυψη των κουμπιών Αρχάριος/Προχωρημένος και Πρότυπα»: εφαρμόζεται αμέσως με το κλικ και αποθηκεύεται.
+// Η επιλογή κρατά τους μαθητές στον «Αρχάριο», οπότε αν η εφαρμογή είναι σε «Προχωρημένο» γυρίζει πρώτα σε «Αρχάριο».
+function setHideModeControls(hide) {
+  appSettings.hideBeginnerControls = !!hide;
+  if (hide && currentMode !== 'beginner') setMode('beginner');
+  applyModeVisibility();
+  if (window.electronAPI && window.electronAPI.saveSettings) {
+    window.electronAPI.saveSettings({ hideBeginnerControls: !!hide });
+  }
+}
+
 function applyModeVisibility() {
   const modeSelector = document.querySelector('.mode-selector');
   const templatesGroup = document.getElementById('ribbon-group-templates');
@@ -1273,7 +1853,10 @@ function populateSettingsUI() {
   syncAppearanceControls();
   if (browserSelect) browserSelect.value = appSettings.browser || 'msedge';
   if (folderInput) folderInput.value = appSettings.saveDirectory || '';
-  if (hideCheckbox) hideCheckbox.checked = !!appSettings.hideBeginnerControls;
+  if (hideCheckbox) {
+    hideCheckbox.checked = !!appSettings.hideBeginnerControls;
+    hideCheckbox.onchange = () => setHideModeControls(hideCheckbox.checked);
+  }
   const autoUpdateCheckbox = document.getElementById('setting-auto-update-check');
   if (autoUpdateCheckbox) autoUpdateCheckbox.checked = appSettings.autoUpdateCheck !== false;
 
@@ -1338,7 +1921,7 @@ async function saveCurrentSettings() {
   }
 
   updateBrowserButton();
-  applyModeVisibility();
+  setHideModeControls(hideControls);
   closeModal('settings-modal');
   showToast('Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς!');
 }
@@ -1456,8 +2039,7 @@ function renderUpdateModal(s) {
 
 // Μη αποθηκευμένες αλλαγές στον editor (η γραμμή κατάστασης δείχνει «● Μη αποθηκευμένο»)
 function hasUnsavedChanges() {
-  const el = document.getElementById('status-save');
-  return !!el && el.textContent.includes('Μη αποθηκευμένο');
+  return fileTabs.some((t) => !t.saved);
 }
 
 // Το κουμπί ενέργειας του παραθύρου ενημέρωσης, ανάλογα με την κατάσταση
@@ -1517,19 +2099,18 @@ function setupEventListeners() {
   document.getElementById('btn-mode-beginner').onclick = () => setMode('beginner');
   document.getElementById('btn-mode-advanced').onclick = () => setMode('advanced');
 
-  // Tabs
-  document.getElementById('tab-html').onclick = () => switchTab('html');
-  document.getElementById('tab-css').onclick = () => switchTab('css');
+  // Καρτέλες αρχείων (φτιάχνονται από το renderTabs)
+  renderTabs();
 
   // Toolbar actions
   document.getElementById('btn-new').onclick = createNewFile;
   document.getElementById('btn-open').onclick = openFile;
   document.getElementById('btn-save').onclick = () => saveCurrentFile(false);
   document.getElementById('btn-save-as').onclick = () => saveCurrentFile(true);
-  document.getElementById('btn-quick-save').onclick = () => saveCurrentFile(false);
   document.getElementById('btn-insert-image').onclick = insertImageFromFile;
-  document.getElementById('btn-quick-image').onclick = insertImageFromFile;
+  document.getElementById('btn-fix-css-link').onclick = insertCssLink;
   document.getElementById('btn-export-zip').onclick = exportZip;
+  document.getElementById('btn-zip-create').onclick = createZipFromDialog;
   document.getElementById('btn-format').onclick = formatCode;
   document.getElementById('btn-templates').onclick = () => openModal('templates-modal');
   document.getElementById('btn-open-edge').onclick = () => openInExternalBrowser();
@@ -1682,6 +2263,12 @@ function setupEventListeners() {
       } else if (e.key === 'g' || e.key === 'G') {
         e.preventDefault();
         toggleGuidePanel();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        cycleTabs(e.shiftKey ? -1 : 1);
+      } else if ((e.key === 'w' || e.key === 'W') && !e.shiftKey) {
+        e.preventDefault();
+        closeFileTab(activeTabId);
       }
     } else if (e.key === 'F5') {
       e.preventDefault();
@@ -2059,6 +2646,12 @@ async function handleEditorContextMenu(cm, e) {
         triggerAutocomplete(cm);
       }
     },
+    ...(currentMode === 'advanced' ? [{
+      id: 'insertCssLink',
+      icon: '🔗',
+      label: 'Σύνδεση με CSS (<link>)',
+      action: () => insertCssLink()
+    }] : []),
     {
       id: 'insertImage',
       icon: '🖼️',

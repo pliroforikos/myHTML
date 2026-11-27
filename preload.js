@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFile: (data) => ipcRenderer.invoke('dialog:saveFile', data),
   saveFileDirect: (data) => ipcRenderer.invoke('app:saveFileDirect', data),
   pickImage: (baseDir) => ipcRenderer.invoke('dialog:pickImage', baseDir),
+  checkFilesExist: (paths) => ipcRenderer.invoke('fs:existsMany', paths),
+  scanFolderForZip: (folder) => ipcRenderer.invoke('zip:scanFolder', folder),
+  createZip: (request) => ipcRenderer.invoke('zip:create', request),
   openInExternalBrowser: (data) => ipcRenderer.invoke('app:openInExternalBrowser', data),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   // Ενημερώσεις μέσα από την εφαρμογή (δες updater.js)

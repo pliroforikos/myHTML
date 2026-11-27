@@ -5,6 +5,7 @@ const os = require('os');
 const Themes = require('./src/js/themes');
 const { Updater } = require('./updater');
 const { computeImageSrc } = require('./imagePath');
+const zipExport = require('./zipExport');
 
 // Στα Windows και στο Linux η κεφαλίδα της εφαρμογής (ύψος 46px, δες style.css) παίρνει τη θέση της γραμμής τίτλου.
 // Τα κουμπιά του παραθύρου (ελαχιστοποίηση, μεγιστοποίηση, κλείσιμο) τα βάζει το σύστημα πάνω δεξιά, με χρώματα που
@@ -303,6 +304,48 @@ ipcMain.handle('dialog:pickImage', async (event, baseDir) => {
   return { filePath, ...computeImageSrc(baseDir || '', filePath) };
 });
 
+// Ποια από τα αρχεία υπάρχουν στον δίσκο (για τις παρατηρήσεις «δεν βρέθηκε το αρχείο…» της μπάρας ελέγχου)
+ipcMain.handle('fs:existsMany', (event, paths) => {
+  if (!Array.isArray(paths)) return [];
+  return paths.slice(0, 500).map((p) => {
+    try {
+      return typeof p === 'string' && p.length > 0 && fs.existsSync(p);
+    } catch (_) {
+      return false;
+    }
+  });
+});
+
+// --- Εξαγωγή ZIP (δες zipExport.js) ---
+// Πόσα αρχεία και πόσα bytes έχει ένας φάκελος (για την περιγραφή της επιλογής «Ολόκληρος ο φάκελος»)
+ipcMain.handle('zip:scanFolder', (event, folder) => {
+  try {
+    const files = zipExport.listFolderFiles(folder);
+    return { ok: true, count: files.length, bytes: files.reduce((s, f) => s + f.size, 0) };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+// Δημιουργεί το ZIP: request = { mode: 'files', files: [...] } ή { mode: 'folder', folder }, και suggestedName
+ipcMain.handle('zip:create', async (event, request) => {
+  try {
+    const entries = zipExport.zipEntries(request || {});
+    if (entries.length === 0) return { ok: false, error: 'Δεν υπάρχουν αποθηκευμένα αρχεία για το ZIP' };
+    const name = String((request && request.suggestedName) || 'ergasia').replace(/[\\/:*?"<>|]/g, '_');
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Αποθήκευση αρχείου ZIP',
+      defaultPath: path.join(zipExport.suggestedZipDir(request), name.toLowerCase().endsWith('.zip') ? name : name + '.zip'),
+      filters: [{ name: 'Αρχείο ZIP', extensions: ['zip'] }]
+    });
+    if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+    const written = await zipExport.writeZip(entries, result.filePath);
+    return { ok: true, filePath: result.filePath, count: written.count, bytes: written.bytes };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 function getApplicationVersion() {
   try {
     const pkgPath = path.join(__dirname, 'package.json');
@@ -389,6 +432,12 @@ ipcMain.handle('app:openInExternalBrowser', async (event, payload) => {
 
     if (payload && payload.isUrl && payload.url) {
       target = payload.url;
+    } else if (payload && payload.filePath) {
+      // Το αποθηκευμένο αρχείο της σελίδας (η σελίδα το αποθηκεύει πρώτα): ο browser δείχνει το ίδιο το αρχείο
+      if (!fs.existsSync(payload.filePath)) {
+        return { success: false, error: 'Δεν βρέθηκε το αρχείο ' + payload.filePath };
+      }
+      target = payload.filePath;
     } else {
       // Το περιεχόμενο (HTML + ενσωματωμένο CSS) γράφεται σε ΠΡΟΣΩΡΙΝΟ αρχείο στον φάκελο temp του συστήματος.
       // Το αρχείο του χρήστη δεν τροποποιείται ποτέ και δεν δημιουργούνται βοηθητικά αρχεία στον φάκελο εργασίας του.
